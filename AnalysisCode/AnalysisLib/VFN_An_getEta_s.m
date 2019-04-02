@@ -14,7 +14,7 @@ function [eta_s, ind] = VFN_An_getEta_s(nrmDat, cropVal)
 %     Returns
 %     - 'eta_s' star coupling (min within cropped frame)
 %     - 'ind' 6-element vector containing indices of star coupling. 
-%           NOTE: this returns x, y, z, ... coordinates
+%           NOTE: this returns y, x, z, ... coordinates (ie. row, col, ...)
 %
 %   Examples:
 %      [eta_p, ind] = VFN_An_getEta_s(nrmDat);
@@ -26,7 +26,7 @@ function [eta_s, ind] = VFN_An_getEta_s(nrmDat, cropVal)
 %  
 
 %--Eta_s finder - searches for minimum point within the central region
-    % NOTE: this returns x, y, z , ...
+    % NOTE: this returns y, x, z , ...
     if nargin == 1
         % Use default crop window
         cropVal = 7;

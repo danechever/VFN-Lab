@@ -9,7 +9,8 @@ function [eta_p, ind] = VFN_An_getEta_p(nrmDat)
 %
 %     Returns
 %     - 'eta_p' planet coupling (max within frame)
-%     - 'ind' 6-element vector containing indices of planet coupling.
+%     - 'ind' 6-element vector containing indices of planet coupling. 
+%           NOTE: this returns y, x, z, ... coordinates (ie. row, col, ...)
 %
 %   Examples:
 %      [eta_p, ind] = VFN_An_getEta_p(nrmDat);
