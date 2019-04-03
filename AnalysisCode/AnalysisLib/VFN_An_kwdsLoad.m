@@ -1,7 +1,10 @@
 function reskwds = VFN_An_kwdsLoad(nm2find, mat2pull, an_params)
-% VFN_An_kwdsLoad Return All keywords from the specific fits file
+% VFN_An_kwdsLoad Return all keywords from the specific fits file
 %
 %   - This will extract all the keywords from one of the 4 VFN data cubes 
+%   - NOTE: This can be used to load kwds from any fits file within 
+%       an_params.STRNMS, not just VFN data cubes. Just make sure to 
+%       provide a unique nm2find and SET MAT2PULL = 1.
 %   
 %   reskwds = VFN_An_kwdsLoad(nm2find, mat2pull, an_params)
 %     Load the keywords from the file chosen by mat2pull containing the 
