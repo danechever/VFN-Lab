@@ -14,7 +14,7 @@ function nrmDat = VFN_An_fitsNormed(nm2find, frame, an_params)
 %   
 %   nrmDat = VFN_An_fitsNormed(nm2find, frame, an_params)
 %     Load the cube/scan containing the string name, nm2find, and analyze
-%       the data to return the properly normalized 
+%       the data to return the properly normalized data.
 %     - 'nm2find' is the string name to look for within the list of names. 
 %               This can be a partial string; does not need to be the full 
 %               name. It does, however, need to be a unique identifier.

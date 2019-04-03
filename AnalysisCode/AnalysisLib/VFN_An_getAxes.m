@@ -2,15 +2,15 @@ function [xax, yax] = VFN_An_getAxes(nm2find, indVect, an_params)
 % VFN_An_getAxes Return the axes for plotting a frame in Lambda/D
 %   
 %   - This function will calculate the axes for a data frame in Lambda/D.
-%   - It will return an x and y vector for the axes. This is calculated
+%   - It will return an x and y vector for the axes. 
 %   - These axes are centered at the coordinates defined by indVect:
 %           indVect = (row, col) = [yax, xax]
 %   - Note: this function relies on VFN_An_kwdsLoad to load the keywords
 %   - Note: this function reliex on VFN_An_getKwd to read a specific kwd
 %   
 %   nrmDat = VFN_An_getAxes(nm2find, indVect, an_params)
-%     Load the cube/scan containing the string name, nm2find, and analyze
-%       the data to return the properly normalized 
+%     Read the keywords for the file identified by nm2find and return the 
+%           axes for plotting in lambda/D.
 %     - 'nm2find' is the string name to look for within the list of names. 
 %               This can be a partial string; does not need to be the full 
 %               name. It does, however, need to be a unique identifier.
