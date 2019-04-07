@@ -5,10 +5,16 @@ function [radvg, rvec] = VFN_An_radAverage(img, cent, radpts, angpts)
 %       takes the average azimuthally
 %   - This function automatically takes the average out to the largest 
 %       radius possible without clipping the edge of the image.
+%
+%   ** NOTE: due to the way polarTransform centers the transformation, your
+%       image should have odd length in all dimensions with the center value at
+%       the middle. (ex: 21x21 w/ cent=[11,11] instead of 20x20 w/ cent=[10,10])
+%       This is not a problem for VFN data since it is output in this way
+%       automatically by the scanning script.
 %   
 %   [radvg, rvec] = VFN_An_radAverage(img, cent, radpts, angpts)
 %     Azimuthally average s.t. mean radial profile is provided.
-%     - 'img' image to average
+%     - 'img' image to average. Should be odd sized (see note above).
 %     - 'cent' OPTIONAL: indices for origin of polar coordinates
 %               Should be: [rowindex, colindex]
 %               If not provided, cent = the center of the image
