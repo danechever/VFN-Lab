@@ -28,8 +28,7 @@ an_params.Fnum  = 10.96/2.1;    % f=10.96 from Thorlabs A397 datasheet
 % Wavelength
 an_params.lambda = 0.635;   % [microns]
 % Conversion: microns to L/D in focal plane [L/D / micron]
-an_params.um2LD = 1/(an_params.lambda*an_params.Fnum);  
-                            
+an_params.um2LD = 1/(an_params.lambda*an_params.Fnum);                              
 % Conversion: piezo [V] to microns
 an_params.V2um = 1/10;%8.72;    %<-- Value from PZT characterization (spec = 1/10)
 % Fresnel Reflections at fiber surfaces
@@ -53,6 +52,9 @@ isPrintLoc  = false;    % Print null/planet locations
 isSave      = false;    % Save (.mat) data
 isSaveFig   = false;    % Save figures
 isDispItr   = true;     % Print fmincon iteration statuses
+
+%-- Option to use parallel computing for fmincon calculation
+isparcomp   = true;
 
 % Default fonts for saved figures
 fontsize1 = 14;
@@ -287,7 +289,6 @@ modPSF.totalPower0 = totalPower0;   % Total power on fibertip
 modPSF.lambdaOverD = lambdaOverD;   
 modPSF.coords = coords;
 modPSF.lambda = an_params.lambda;   % Wavelength
-modPSF.N = N;       % Number of samples
 
 
 %% Start Donut Model      (mostly coppied from main_pupilBasedVFN)
@@ -412,7 +413,6 @@ modDON.totalPower0 = totalPower0;   % Total power on fibertip
 modDON.lambdaOverD = lambdaOverD;   
 modDON.coords = coords;
 modDON.lambda = an_params.lambda;   % Wavelength
-modDON.N = N;       % Number of samples
 
 %% Use fmincon to do LSQ fit
 disp('--- Doing LSQ minimization')
@@ -455,9 +455,9 @@ else
 end
 options = optimoptions('fmincon', ...
                        'Display', disptype, ...
-                       'StepTolerance', 1e-5, ...
+                       'StepTolerance', 2e-3, ...
                        'MaxIterations', 50, ...
-                       'UseParallel', true);
+                       'UseParallel', isparcomp);
 
 %-- Minimize LSQ
 disp('  Performing minimization')
@@ -468,6 +468,8 @@ disp('  Minimization complete')
 disp('--- Processing results')
 
 %-- Extract results from X vector
+    % NOTE: X-vector the produces results within spec but not best LSQval:
+    %   X = [0.8780, 1.0731, 0.9146];
 thpt = X(1);        % Throughput scaling factor
 pztg = X(2);        % piezo-gain (radial) scaling factor
 mfdf = X(3);        % MFD/F# ratio
@@ -510,10 +512,10 @@ coup_don = generateCouplingMap(fibmod_don, modDON.PSFv, modDON.totalPower0, 8*mo
 %-- Get average radial profiles
 cent = [ind_psf(2), ind_psf(1)];
 % Interpolate at 2x model sampling
-[radvg_psf,rvec_psf] = VFN_An_radAverage(coup_psf, cent, modPSF.N*2);
+[radvg_psf,rvec_psf] = VFN_An_radAverage(coup_psf, cent, modPSF.coords.N*2);
 cent = [ind_don(2), ind_don(1)];
 % Interpolate at 2x model sampling
-[radvg_don,rvec_don] = VFN_An_radAverage(coup_don, cent, modDON.N*2);
+[radvg_don,rvec_don] = VFN_An_radAverage(coup_don, cent, modDON.coords.N*2);
 
 %-- Get radial axes
 rax_psf = rvec_psf/modPSF.lambdaOverD;

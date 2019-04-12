@@ -19,9 +19,6 @@ function LSQval = VFN_An_LSQfunc(X, datPSF, datDON, modPSF, modDON)
 %       function trying to fit the model to the data.
 %
 %   NOTES FOR IMPROVEMENTS:
-%   - when cropsize gets rounded, it introduces a slight difference between the
-%       model and data x-positions so the LSQ calc at the end isn't exactly
-%       subtracting point-point correctly.
 %   - The slope of the curves at the end do not automatically match so in the
 %       current LSQ calculation. As such, there would be errors in the fit
 %       beyond the fit range. This could be mitigated by adding a slope term to
@@ -120,55 +117,29 @@ coup_don = generateCouplingMap(fibmod_don, modDON.PSFv, modDON.totalPower0, 8*mo
 [~, ind_psf] = VFN_An_getEta_p(coup_psf);
 [~, ind_don] = VFN_An_getEta_s(coup_don,2.03);
 
-%-- Crop model coupling maps to same size as data; center on null point
-    % Assumes rax values for data are in lambda/D
-    % Rescales in radial direction by changing how big the crop frame should be
-    % (or equivalently what 1L/D for the model is)
-%---- PSF
-cropsize = raxDat_psf(end)*modPSF.lambdaOverD*pztg;        %use pztg to rescale
-% NOTE: croprows and cropcols initially had a +1 which caused problems since it
-    % output an even (20x20 vs 21x21)matrix with the peak slightly off center:
-    %   croprows = ind_psf(1)-round(cropsize)+1:ind_psf(1)+round(cropsize);
-% NOTE: when cropsize gets rounded, it introduces a slight difference between
-    % the model and data x-positions so the LSQ calc at the end isn't exactly
-    % subtracting point-point correctly.
-croprows = ind_psf(1)-round(cropsize):ind_psf(1)+round(cropsize);
-cropcols = ind_psf(2)-round(cropsize):ind_psf(2)+round(cropsize);
-coup_psf = coup_psf(croprows,cropcols);
-%---- Donut
-cropsize = raxDat_don(end)*modDON.lambdaOverD*pztg;     %use pztg to rescale
-% NOTE: croprows and cropcols initially had a +1 which caused problems since it
-    % output an even (20x20 vs 21x21)matrix with the peak slightly off center:
-    %   croprows = ind_don(1)-round(cropsize)+1:ind_don(1)+round(cropsize);
-% NOTE: when cropsize gets rounded, it introduces a slight difference between
-    % the model and data x-positions so the LSQ calc at the end isn't exactly
-    % subtracting point-point correctly.
-croprows = ind_don(1)-round(cropsize):ind_don(1)+round(cropsize);
-cropcols = ind_don(2)-round(cropsize):ind_don(2)+round(cropsize);
-coup_don = coup_don(croprows,cropcols);
-
 %-- Get average radial profile
-% Interpolate same number of points as data vectors
-if length(radvgDat_psf) ~= length(radvgDat_don)
-    error('Data vectors are not of equal length so weighting will be different')
-end
-simrpts = length(radvgDat_psf);
-% Provide center of cropped image since cropped to null point already
-cent = ceil(size(coup_psf)/2);
+cent = [ind_psf(2), ind_psf(1)];
 [radvg_psf,rvec_psf] = ...
-            VFN_An_radAverage(coup_psf, cent, simrpts);
-cent = ceil(size(coup_don)/2);
+            VFN_An_radAverage(coup_psf, cent);
+cent = [ind_don(2), ind_don(1)];
 [radvg_don,rvec_don] = ...
-            VFN_An_radAverage(coup_don, cent, simrpts);
+            VFN_An_radAverage(coup_don, cent);
         
 %-- Rescale model coupling by thpt
 radvg_psf = radvg_psf*thpt;
 radvg_don = radvg_don*thpt;
         
-% %-- Get radial axis for models
-% rax_psf = rvec_psf/modPSF.lambdaOverD;
-% rax_don = rvec_don/modDON.lambdaOverD;
+%-- Get radial axis for models
+rax_psf = rvec_psf/modPSF.lambdaOverD;
+rax_don = rvec_don/modDON.lambdaOverD;
 
+%-- Rescale model at new pzt gain of data using interpolation
+% Interpolate same number of points as data vectors
+if length(radvgDat_psf) ~= length(radvgDat_don)
+    error('Data vectors are not of equal length so weighting will be different')
+end
+radvg_psf = interp1(rax_psf, radvg_psf, raxDat_psf*pztg)';
+radvg_don = interp1(rax_don, radvg_don, raxDat_don*pztg)';
 
 %% Calculate LSQ value
 % Since all vectors are of the same length, can use a single summation:
