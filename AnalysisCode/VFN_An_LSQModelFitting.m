@@ -434,11 +434,13 @@ beq = [];
 
 %-- Provide lower and upper bounds
 % No negative scaling values or MFD/F#;
-lb = [0;                    
-      0;
-      0];
+lb = [0.5;                      % min throughput scaling of 1/2           
+      1/an_params.V2um/13.5;    % max piezocal of 13.5 V/micron
+      1.5/an_params.Fnum];      % min MFD of 1.5 microns
 % Provide no upper limits
-ub = [];
+ub = [2;                    % max throughput scaling of 2
+      1/an_params.V2um/7;   % min piezocal of 7 V/micron
+      8/an_params.Fnum];    % max MFD of 8 microns
 
 %-- Set special minimization parameters
 % Set nonlcon blank so that we can provide 'options'
@@ -455,8 +457,8 @@ else
 end
 options = optimoptions('fmincon', ...
                        'Display', disptype, ...
-                       'StepTolerance', 2e-3, ...
-                       'MaxIterations', 50, ...
+                       'StepTolerance', 1e-8, ... %2e-3, ...
+                       'MaxIterations', 750, ... % 50, ...
                        'UseParallel', isparcomp);
 
 %-- Minimize LSQ
@@ -469,7 +471,8 @@ disp('--- Processing results')
 
 %-- Extract results from X vector
     % NOTE: X-vector the produces results within spec but not best LSQval:
-    %   X = [0.8780, 1.0731, 0.9146];
+    %   X = [0.8780, 1.0731, 0.9146]; %<-- Original solution w/ close-to-spec MFD
+    %   X = [0.920 , 1.085 , 1.0669]; %<-- Solution with lowest LSQ value
 thpt = X(1);        % Throughput scaling factor
 pztg = X(2);        % piezo-gain (radial) scaling factor
 mfdf = X(3);        % MFD/F# ratio
@@ -521,6 +524,42 @@ cent = [ind_don(2), ind_don(1)];
 rax_psf = rvec_psf/modPSF.lambdaOverD;
 rax_don = rvec_don/modDON.lambdaOverD;
 
+%% Create ideal models (F# matched to MFD from fit)
+disp('--- Generating ideal F# models')
+
+%-- Generate fibermode using correct MFD
+% Ideal fiberdiam (MFD) [in lambda/D]
+fibD_psfi = 1.4;
+fibD_doni = 1.4;
+% Fiberdiam (MFD) [in samples of model]
+fibD_psfi = fibD_psfi*modPSF.lambdaOverD;
+fibD_doni = fibD_doni*modDON.lambdaOverD;
+% Fiber mode
+fibmod_psfi = generateSMFmode_gaussian(fibD_psfi, modPSF.coords);
+fibmod_doni = generateSMFmode_gaussian(fibD_doni, modDON.coords);
+
+disp('  Calculating coupling maps')
+
+%-- Generate coupling maps
+coup_psfi = generateCouplingMap(fibmod_psfi, modPSF.PSFv, modPSF.totalPower0, 8*modPSF.lambdaOverD, modPSF.coords);
+coup_doni = generateCouplingMap(fibmod_doni, modDON.PSFv, modDON.totalPower0, 8*modDON.lambdaOverD, modDON.coords);
+
+%-- Get peak (PSF) and null (Donut)
+[etaP_psfi, ind_psfi] = VFN_An_getEta_p(coup_psfi);
+[etaS_psfi, ind_doni] = VFN_An_getEta_s(coup_doni,2.03);
+
+%-- Get average radial profiles
+cent = [ind_psfi(2), ind_psfi(1)];
+% Interpolate at 2x model sampling
+[radvg_psfi,rvec_psfi] = VFN_An_radAverage(coup_psfi, cent, modPSF.coords.N*2);
+cent = [ind_doni(2), ind_doni(1)];
+% Interpolate at 2x model sampling
+[radvg_doni,rvec_doni] = VFN_An_radAverage(coup_doni, cent, modDON.coords.N*2);
+
+%-- Get radial axes
+rax_psfi = rvec_psfi/modPSF.lambdaOverD;
+rax_doni = rvec_doni/modDON.lambdaOverD;
+
 %% Re-Analyze Lab Data with new Parameters
 disp('--- Re-interpolating Lab Data')
 
@@ -561,29 +600,64 @@ disp('  Getting radial average')
 raxDON = (xaxDON(2)-xaxDON(1))*rvecDON;
 
 %% Plot Results
+nmtag = sprintf('MFD%05.2f_PZTG%05.2f_THPT%05.2f',MFD, 1/an_params.V2um, thpt);
+
+%-- Display 2D Map of Lab Donut with corrections
+fighDON = VFN_An_fitsDisp(nrmDONSc, xaxDON, yaxDON);
+% Use parula for this data since want to see nuances of asymmetry
+colormap parula
+title('Donut Coupling (Lab - Rescaled)')
+if isSaveFig
+    export_fig([savefld filesep 'ModelFit_' nmtag '_LabDonutCoupMap.png'],'-r300', '-painters')
+end
+
+%-- Display 2D Map of Model Donut that matches Lab
+figure('color', 'white');
+xax_sim = ((1:size(coup_don,2))-ind_don(2))/modDON.lambdaOverD;
+yax_sim = ((1:size(coup_don,1))-ind_don(1))/modDON.lambdaOverD;
+imagesc(xax_sim, yax_sim, coup_don); 
+axis([-1.3 1.3 -1.3 1.3]); 
+% Use parula for this data since want to see nuances of asymmetry 
+colormap parula 
+title('Donut Coupling (Sim - Rescaled)')  
+if isSaveFig
+    export_fig([savefld filesep 'ModelFit_' nmtag '_ModelDonutCoupMap.png'],'-r300', '-painters')
+end
 
 %-- Display PSF profile
 figPSFTot_rad = figure('color', 'white');
+% Plot Corrected lab data
 z = plot(raxPSF,radvgPSF*100, 'LineWidth', 4);
 hold on
+% Plot matching model
 plot(rax_psf, radvg_psf*100, 'LineWidth', 4);
+% Plot ideal model
+plot(rax_psfi, radvg_psfi*100, 'LineWidth', 4);
 set(gca,'fontsize',fontsize2)
 xlim([0 1.5])
 title('Average radial PSF coupling')
 xlabel('Angular separation [\lambda/D]', 'FontSize', fontsize1);
 ylabel('Coupling [%]', 'FontSize', fontsize1);
-legend('Lab', 'Model');
+legend('Lab', 'Model', 'Ideal');
+if isSaveFig
+    export_fig([savefld filesep 'ModelFit_' nmtag '_PSFRadProfile.png'],'-r300', '-painters')
+end
 
 %-- Display Donut profile
 figDONTot_rad = figure('color', 'white');
+% Plot Corrected lab data
 z = plot(raxDON,radvgDON*100, 'LineWidth', 4);
 hold on
+% Plot matching model
 plot(rax_don, radvg_don*100, 'LineWidth', 4);
+% Plot ideal model
+plot(rax_doni, radvg_doni*100, 'LineWidth', 4);
 set(gca,'fontsize',fontsize2)
 xlim([0 1.5])
 title('Average radial Donut coupling')
 xlabel('Angular separation [\lambda/D]', 'FontSize', fontsize1);
 ylabel('Coupling [%]', 'FontSize', fontsize1);
-legend('Lab', 'Model');
-
-
+legend('Lab', 'Model', 'Ideal');
+if isSaveFig
+    export_fig([savefld filesep 'ModelFit_' nmtag '_DonutRadProfile.png'],'-r300', '-painters')
+end
