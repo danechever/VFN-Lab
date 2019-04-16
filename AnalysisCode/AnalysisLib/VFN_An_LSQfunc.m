@@ -104,13 +104,13 @@ fibmod_psf = generateSMFmode_gaussian(fibD_psf*modPSF.lambdaOverD,modPSF.coords)
 fibmod_don = generateSMFmode_gaussian(fibD_don*modDON.lambdaOverD,modDON.coords);
 
 %-- Generate coupling maps
-    % Note: use 8*lambda/D instead of 3* since we want to be able to vary the
+    % Note: use 5*lambda/D instead of 3* since we want to be able to vary the
     % fiber diameters by a large amount. This, however will be time-costly. Can
-    % consider decreasing. 8 was chosen as:
+    % consider decreasing. 5 was chosen as:
     %       (8/(1.4*lambda*F#))*1.4 = V ---> so use 2*V to have padding
-    %       (8/(1.4*0.635*3.1))*1.4 ~ 4 ---> 2*4 = 8        where 3.1=F# for original system
-coup_psf = generateCouplingMap(fibmod_psf, modPSF.PSFv, modPSF.totalPower0, 8*modPSF.lambdaOverD, modPSF.coords);
-coup_don = generateCouplingMap(fibmod_don, modDON.PSFv, modDON.totalPower0, 8*modDON.lambdaOverD, modDON.coords);
+    %       (8/(1.4*0.635*5.2))*1.4 ~ 2.5 ---> 2*2.5 = 5        where 5.2=F# for original system
+coup_psf = generateCouplingMap(fibmod_psf, modPSF.PSFv, modPSF.totalPower0, 5*modPSF.lambdaOverD, modPSF.coords);
+coup_don = generateCouplingMap(fibmod_don, modDON.PSFv, modDON.totalPower0, 5*modDON.lambdaOverD, modDON.coords);
 
 %% Get radial profile of model coupling maps (and rescale)
 %-- Find peak (PSF) and null (Donut)
@@ -144,4 +144,23 @@ radvg_don = interp1(rax_don, radvg_don, raxDat_don*pztg)';
 %% Calculate LSQ value
 % Since all vectors are of the same length, can use a single summation:
 LSQval = sum( (radvgDat_psf - radvg_psf).^2 + (radvgDat_don - radvg_don).^2);
+
+%% OPTIONAL: Plot line profiles
+% % Donut
+% figure; 
+% plot(raxDat_don,radvgDat_don*100, 'LineWidth', 4);
+% hold on;
+% plot(raxDat_don,radvg_don*100,'LineWidth', 4);  
+% xlabel('Angular separation [\lambda/D]', 'FontSize', fontsize1);
+% ylabel('Coupling [%]', 'FontSize', fontsize1);
+% legend('Lab', 'Model', 'Location', 'northwest')
+% % PSF
+% figure; 
+% plot(raxDat_psf,radvgDat_psf*100, 'LineWidth', 4);
+% hold on;
+% plot(raxDat_psf,radvg_psf*100,'LineWidth', 4);  
+% xlabel('Angular separation [\lambda/D]', 'FontSize', fontsize1);
+% ylabel('Coupling [%]', 'FontSize', fontsize1);
+% legend('Lab', 'Model')
+
 end
