@@ -1,0 +1,1 @@
+fprintf('No cleanup is required for the femto power meter')
