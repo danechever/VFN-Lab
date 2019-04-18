@@ -18,11 +18,20 @@
 
 *** This version uses the red thorlabs power meter to normalize the values
 
+*** [04/17/19] Modified to make red PM read for normalization optional
+    - Added isPMNorm flag to choose whether red PM is read or not
+    - When red PM is not read, -9999 is saved as pmRead value in the data
+        cube and the normed cube is "normed" by 1. Also, all values
+        reported at end of script are normed by 1.
+    - Added isPMNorm flag to keywords of data and normed cubes
+    * Also, fixed path in first line to reflect the fact that all the
+        control code is now in a git repo
+
 %}
 % Programm to run the piezo's in the VFN experiment to see the donut
 
 %% add the necessary functions
-addpath(genpath('C:\Users\AOlab1\Desktop\DE2\VFN\ControlCode\'));
+addpath(genpath('C:\Users\AOlab1\Desktop\DE2\VFN\VFN-Lab\ControlCode'));
 
 close all
 clear all
@@ -77,7 +86,7 @@ ZStepSize = 15;
 backlash  = 10; % Kept backlash in to see if it did anything
 %~~ END PIEZO STUFF 
 
-%~~ POWER METER STUFF 
+%~~ FEMTO POWER METER STUFF 
 isAutoScale = true; % If false, the gain is held fixed. Else, gain
                         % is set automatically using FMTO_setAutoGain()
 FMTO_scale = 6;     % Starting gain. the n in: 10^n for the gain setting
@@ -90,8 +99,14 @@ delInd      = find(delLookUp<=StepSize,1);  % index of delay to use
 Delay       =delLookUp(delInd,2); 
 Delay = 0.1;
 fprintf('Delay in use: %0.1f\n', Delay)
-%~~ END POWER METER STUFF 
+%~~ END FEMTO POWER METER STUFF 
 
+%~~ RED (NORM) POWER METER STUFF 
+pmNread = 100;      % Number of samples to take
+isPMNorm = false;   % Flag to mark whether this PM should be read
+                        % This flag is useful in case the PM is not in the
+                        % system. NaN will replace the pmRead values.
+%~~ END RED (NORM) POWER METER STUFF
 %% Zaber Setup
 if isVortScan && ~isZab
     error('isVortScan is true but vortex motion is disabled with isZab')
@@ -145,21 +160,24 @@ VFN_setUpFMTO;
 fprintf('Current Gain setting: %i\n', FMTO_scale)
 
 %% Red Thorlabs PM setup
-% Find a VISA-USB object.
-obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x1313::0x8078::P0015560::0::INSTR', 'Tag', '');
 
-% Create the VISA-USB object if it does not exist
-% otherwise use the object that was found.
-if isempty(obj1)
-    obj1 = visa('NI', 'USB0::0x1313::0x8078::P0015560::0::INSTR');
-else
-    fclose(obj1);
-    obj1 = obj1(1);
+%-- Connect to red PM only if it will be used
+if isPMNorm
+    % Find a VISA-USB object.
+    obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x1313::0x8078::P0015560::0::INSTR', 'Tag', '');
+
+    % Create the VISA-USB object if it does not exist
+    % otherwise use the object that was found.
+    if isempty(obj1)
+        obj1 = visa('NI', 'USB0::0x1313::0x8078::P0015560::0::INSTR');
+    else
+        fclose(obj1);
+        obj1 = obj1(1);
+    end
+
+    % Connect to instrument object, obj1.
+    fopen(obj1);
 end
-
-% Connect to instrument object, obj1.
-fopen(obj1);
-
 %% Perform scan
 distX=(Xcenter-StepSize*Xpoints/2):StepSize:(Xcenter+StepSize*Xpoints/2);
 distY=(Ycenter-StepSize*Ypoints/2):StepSize:(Ycenter+StepSize*Ypoints/2); 
@@ -330,18 +348,24 @@ if isZab
     VFN_Zab_move(pmX, 0);
 end
 
-% Wait for PM value to settle
-pause(1);
+if isPMNorm
+    %-- Actually read from red PM when flag is set. 
+    % Wait for PM value to settle
+    pause(1);
 
-% Take 100 measurements of the power
-pmNread = 100;
-pmRead = nan(pmNread,1);
-for ii = 1:pmNread
-    pmRead(ii)=str2num(query(obj1, 'measure:power?'));
+    % Take measurements of the power
+    pmRead = nan(pmNread,1);
+    for ii = 1:pmNread
+        pmRead(ii)=str2num(query(obj1, 'measure:power?'));
+    end
+else
+    %-- Set pmRead to -9999 if PM is not to be read
+    pmRead = ones(pmNread,1)*-9999;
 end
-
+    
 % Account for ~0.02 loss from fiber lens
 pmRead1 = mean(pmRead(:))*0.997;    % Updated on 2/8/19 based on 10/26/18
+
 
 %% close the connections to all devices
 % Set Femto back to 10^6 
@@ -387,7 +411,10 @@ if isZab
 end
 
 %-- Disconnect from calibration PM
-fclose(obj1);
+if isPMNorm
+    %-- Only disconnect if we connected earlier
+    fclose(obj1);
+end
 
 %% Scale data accordingly to compensate for varied gain
 %-- This is for plotting and analysis; the raw data is still stored as well
@@ -397,11 +424,17 @@ fclose(obj1);
 %-- Define scaled matrix; equal to mean of meas unless gain was varied
 measScl = mean(measScl,3).*scales(:,:,2,:,:,:);
 
-%-- Define a separate matrix which normalizes the data by power on the fiber
-% Convert the calibration PM value from W to uW
-pmRead1 = pmRead1*10^6;
-% Translate the calibration PM value from uW to V (at 10^6)
-pmRead1 = pmRead1*0.63;     % V/uW conversion is ~ 0.63
+%-- Define a separate matrix which normalizes the data by power on the 
+if isPMNorm
+    %-- When actual PM reading was done, normalize as usual
+    % Convert the calibration PM value from W to uW
+    pmRead1 = pmRead1*10^6;
+    % Translate the calibration PM value from uW to V (at 10^6)
+    pmRead1 = pmRead1*0.63;     % V/uW conversion is ~ 0.63
+else
+    %-- When PM was not read, set normalization value to 1
+    pmRead1 = 1;
+end
 % Create the matrix and normalize by total power on fib tip
 measScl2 = measScl/pmRead1;
 
@@ -534,6 +567,7 @@ ind = strfind(SRCubeNm ,'\');
 fits.writeKey(fitmap, 'SRCube ', SRCubeNm(ind(end-1)+1:end));
 ind = strfind(NormCubeNm ,'\');
 fits.writeKey(fitmap, 'NormCube ', NormCubeNm(ind(end-1)+1:end));
+fits.writeKey(fitmap, 'NormFlag', logical(isPMNorm));
 fits.writeKey(fitmap, 'NormMean', mean(pmRead));
 fits.writeKey(fitmap, 'NormSTD', std(pmRead));
 
@@ -587,6 +621,7 @@ fits.writeKey(fitmap, 'NAX3', 'mean(meas-bias)*Gain/pmRead');
 fits.writeKey(fitmap, 'NAX4', 'Focus');
 fits.writeKey(fitmap, 'NAX5', 'XVortexCoord');
 fits.writeKey(fitmap, 'NAX6', 'YVortexCoord');
+fits.writeKey(fitmap, 'NormFlag', logical(isPMNorm));
 fits.writeKey(fitmap, 'NormMean', mean(pmRead));
 fits.writeKey(fitmap, 'NormSTD', std(pmRead));
 
