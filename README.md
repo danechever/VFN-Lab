@@ -1,8 +1,20 @@
-#VFN-Lab
+# VFN-Lab #
 
-Code Used for running the VFN bench and analyzing the results.
+Code used for running the VFN bench and analyzing the results.
 
-\AnalysisCode\ code contains a library of functions for reading 
-    the data and analyzing it. It also contains sample scripts 
-    showing how the analysis is done.
+## \AnalysisCode\ ##
+    * Contains a library of functions (AnalysisLib) for 
+    reading the data and analyzing it. 
+    * Also contains sample scripts showing how an analysis 
+    is done.
+    * One of the sample scripts is used for doing a LSQ Fit.
 
+## \ControlCode\ ##
+    * Contains control code for the various devices in the 
+    the VFN bench.
+    * Also has control scripts used to do the VFN scans.
+    * Also has control scripts for miscellaneous tests.
+    
+## \IDSandThorlabsCameraCode\ ##
+    * Code for using the IDS or Thorlabs camera. This includes
+    the simple script (command-line) and GUI.
