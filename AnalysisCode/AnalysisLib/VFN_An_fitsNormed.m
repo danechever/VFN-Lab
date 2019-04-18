@@ -11,6 +11,12 @@ function nrmDat = VFN_An_fitsNormed(nm2find, frame, an_params)
 %       - account for fiber Fresnel reflections and propogation losses
 %   - Note: this function relies on VFN_An_fitsLoad to load the data.
 %   - Note: this function relies on VFN_An_kwdsLoad to load the keywords
+%
+%   * UPDATE [04/17/19]:
+%       Function was updated to reflect the fact that the red PM normalization
+%       value is now optional in the scan code. It now checks if the red PM was
+%       used. If it was not, it does not normalize by the power on the fiber tip
+%       but it does still account for propagation and fresnel losses.
 %   
 %   nrmDat = VFN_An_fitsNormed(nm2find, frame, an_params)
 %     Load the cube/scan containing the string name, nm2find, and analyze
@@ -85,13 +91,23 @@ function nrmDat = VFN_An_fitsNormed(nm2find, frame, an_params)
     gns = gns.^-(scl(:,:,1)-6);
     nrm = nrm.*gns;
     
-    %-- Get red thorlabs PM value for normalization
-    % Read from keywords
-    nrmVl = VFN_An_getKwd(kwds, 'NORMMEAN');
-    % Account for losses in the final lens
-    nrmVl = nrmVl*lensTHPT;
-    % Convert from Watts to uWatts
-    nrmVl = nrmVl*10^6;
+    %-- Check if red PM was used. Assumes that if normflag keyword is missing,
+        %the cube predates this keyword and has the red PM data in it.
+        % Note: getKwd() returns [] if the keyword was not present
+    pmflg = VFN_An_getKwd(kwds, 'NORMFLAG');
+    if isempty(pmflg) || pmflg == 'T'
+        %-- Get red thorlabs PM value for normalization since it exists
+        % Read from keywords
+        nrmVl = VFN_An_getKwd(kwds, 'NORMMEAN');
+        % Account for losses in the final lens
+        nrmVl = nrmVl*lensTHPT;
+        % Convert from Watts to uWatts
+        nrmVl = nrmVl*10^6;
+    else
+        %-- Red PM was not used (flag was present but not 'T[rue]'
+        % Set nrmVal to 1 so that we do not scale/normalize the data
+        nrmVl = 1;
+    end
     
     %-- Normalize the data to get eta's (use nem's equation)
     nrmDat = nrm.*(rdOfmto*(1/nrmVl)*(1/(FR^2))*(1/(PL^2)));

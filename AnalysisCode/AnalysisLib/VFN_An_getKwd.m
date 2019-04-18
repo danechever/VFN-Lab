@@ -3,6 +3,7 @@ function kwd = VFN_An_getKwd(kwds, kwd2find)
 %   
 %   - Note: kwd2find will automatically be capitalized to make sure it 
 %       matches fits convention.
+%   - Note: if kwd2find is not present in the kwds array, [] will be returned.
 %
 %   kwd = VFN_An_getKwd(kwds, kwd2find)
 %     Extract the keyword from the set of keywords
