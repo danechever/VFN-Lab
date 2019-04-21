@@ -50,7 +50,7 @@ datveclength = 50;
 %-- Flags for save/print options
 isPrintLoc  = false;    % Print null/planet locations
 isSave      = false;    % Save (.mat) data
-isSaveFig   = false;    % Save figures
+isSaveFig   = true;    % Save figures
 isDispItr   = true;     % Print fmincon iteration statuses
 
 %-- Option to use parallel computing for fmincon calculation
@@ -170,7 +170,7 @@ datDON.rax = raxDON;         % X-axis (radial) for Donut data - vector
 
 %% Start PSF Model      (mostly coppied from main_pupilBasedVFN)
 disp('--- Prepping PSF Model')
-N = 2^12; % Size of computational grid (NxN samples) 
+N = 2^13; % Size of computational grid (NxN samples) 
 apRad = 150; % Aperture radius in samples 
 charge = 1; % Charge of the vortex mask 
 
@@ -294,7 +294,7 @@ modPSF.lambda = an_params.lambda;   % Wavelength
 %% Start Donut Model      (mostly coppied from main_pupilBasedVFN)
 disp('--- Prepping Donut Model')
 
-N = 2^12; % Size of computational grid (NxN samples) 
+N = 2^13; % Size of computational grid (NxN samples) 
 apRad = 150; % Aperture radius in samples 
 charge = 1; % Charge of the vortex mask 
 
@@ -418,6 +418,9 @@ modDON.lambda = an_params.lambda;   % Wavelength
 disp('--- Doing LSQ minimization')
 
 %-- Define function LSQ calculating function
+    % Consider modifying function to optimize mfdf independently for donut/PSF.
+    % It's likely that these have different focci due to defocus in the vortex
+    % mask
 func = @(X) VFN_An_LSQfunc(X, datPSF, datDON, modPSF, modDON);
 
 %-- Define starting parameters
@@ -600,64 +603,71 @@ disp('  Getting radial average')
 raxDON = (xaxDON(2)-xaxDON(1))*rvecDON;
 
 %% Plot Results
-nmtag = sprintf('MFD%05.2f_PZTG%05.2f_THPT%05.2f',MFD, 1/an_params.V2um, thpt);
+nmtag = sprintf('ModelFit_MFD%05.2f_PZTG%05.2f_THPT%05.2f',MFD, 1/an_params.V2um, thpt);
 
 %-- Display 2D Map of Lab Donut with corrections
 fighDON = VFN_An_fitsDisp(nrmDONSc, xaxDON, yaxDON);
 % Use parula for this data since want to see nuances of asymmetry
-colormap parula
+%colormap parula
+set(gca,'fontsize',fontsize2)
 title('Donut Coupling (Lab - Rescaled)')
 if isSaveFig
-    export_fig([savefld filesep 'ModelFit_' nmtag '_LabDonutCoupMap.png'],'-r300', '-painters')
+    export_fig([savefld filesep nmtag '_LabDonutCoupMap.png'],'-r300', '-painters')
 end
 
 %-- Display 2D Map of Model Donut that matches Lab
-figure('color', 'white');
 xax_sim = ((1:size(coup_don,2))-ind_don(2))/modDON.lambdaOverD;
 yax_sim = ((1:size(coup_don,1))-ind_don(1))/modDON.lambdaOverD;
-imagesc(xax_sim, yax_sim, coup_don); 
-axis([-1.3 1.3 -1.3 1.3]); 
+fighSim = VFN_An_fitsDisp(coup_don, xax_sim, yax_sim);
+set(gca, 'YDir', 'reverse')
+axis([-1.3 1.3 -1.3 1.3]);
+%axis([min(xaxDON) max(xaxDON) min(yaxDON) max(yaxDON)]); 
 % Use parula for this data since want to see nuances of asymmetry 
-colormap parula 
+%colormap parula
+set(gca,'fontsize',fontsize2)
 title('Donut Coupling (Sim - Rescaled)')  
 if isSaveFig
-    export_fig([savefld filesep 'ModelFit_' nmtag '_ModelDonutCoupMap.png'],'-r300', '-painters')
+    export_fig([savefld filesep nmtag '_ModelDonutCoupMap.png'],'-r300', '-painters')
 end
 
 %-- Display PSF profile
 figPSFTot_rad = figure('color', 'white');
-% Plot Corrected lab data
-z = plot(raxPSF,radvgPSF*100, 'LineWidth', 4);
+% Plot Raw lab data
+plot(datPSF.rax*pztg, datPSF.radvg*100, 'LineWidth', 3)
 hold on
+% Plot Corrected lab data
+plot(raxPSF,radvgPSF*100, 'LineWidth', 3);
 % Plot matching model
-plot(rax_psf, radvg_psf*100, 'LineWidth', 4);
+plot(rax_psf, radvg_psf*100, ':', 'LineWidth', 3);
 % Plot ideal model
-plot(rax_psfi, radvg_psfi*100, 'LineWidth', 4);
+plot(rax_psfi, radvg_psfi*100, ':', 'LineWidth', 3);
 set(gca,'fontsize',fontsize2)
 xlim([0 1.5])
-title('Average radial PSF coupling')
-xlabel('Angular separation [\lambda/D]', 'FontSize', fontsize1);
+title('Average Radial PSF coupling')
+xlabel('Angular Separation [\lambda/D]', 'FontSize', fontsize1);
 ylabel('Coupling [%]', 'FontSize', fontsize1);
-legend('Lab', 'Model', 'Ideal');
+legend('Lab - Raw', 'Lab - Fit', 'Model - Fit', 'Ideal');
 if isSaveFig
-    export_fig([savefld filesep 'ModelFit_' nmtag '_PSFRadProfile.png'],'-r300', '-painters')
+    export_fig([savefld filesep nmtag '_PSFRadProfile.png'],'-r300', '-painters')
 end
 
 %-- Display Donut profile
 figDONTot_rad = figure('color', 'white');
-% Plot Corrected lab data
-z = plot(raxDON,radvgDON*100, 'LineWidth', 4);
+% Plot Raw lab data
+plot(datDON.rax*pztg, datDON.radvg*100, 'LineWidth', 3)
 hold on
+% Plot Corrected lab data
+plot(raxDON,radvgDON*100, 'LineWidth', 3);
 % Plot matching model
-plot(rax_don, radvg_don*100, 'LineWidth', 4);
+plot(rax_don, radvg_don*100, ':', 'LineWidth', 3);
 % Plot ideal model
-plot(rax_doni, radvg_doni*100, 'LineWidth', 4);
+plot(rax_doni, radvg_doni*100, ':', 'LineWidth', 3);
 set(gca,'fontsize',fontsize2)
 xlim([0 1.5])
-title('Average radial Donut coupling')
-xlabel('Angular separation [\lambda/D]', 'FontSize', fontsize1);
+title('Average Radial Donut coupling')
+xlabel('Angular Separation [\lambda/D]', 'FontSize', fontsize1);
 ylabel('Coupling [%]', 'FontSize', fontsize1);
-legend('Lab', 'Model', 'Ideal');
+legend('Lab - Raw', 'Lab - Fit', 'Model - Fit', 'Ideal', 'Location', 'southeast');
 if isSaveFig
-    export_fig([savefld filesep 'ModelFit_' nmtag '_DonutRadProfile.png'],'-r300', '-painters')
+    export_fig([savefld filesep nmtag '_DonutRadProfile.png'],'-r300', '-painters')
 end
