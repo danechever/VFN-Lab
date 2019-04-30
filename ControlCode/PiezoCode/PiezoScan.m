@@ -39,48 +39,48 @@ clear all
 %% General settings 
 
 % Directory for saving data:
-svFld = 'C:\Users\AOlab1\Desktop\DE2\VFN\PupilVFNCoupling\022019_FNM4';
+svFld = 'C:\Users\AOlab1\Desktop\DE2\VFN\PupilVFNCoupling\042419_VPL1';
 
 % Experiment name for figures
-expNm = '9Don_NullScan2';
+expNm = '15Don_FocScan1';
 
 %~~ ZABER STUFF 
 % Flag to enable zaber motion (including centering)
 isZab = true;   % Should be true always since it's needed for the PM norm
-isVortScan = true;
+isVortScan = false;
 
 % Vortex center of scan properties [in mm]
-VXcenter = 12.180000;      % Value when PM stage was added: 12.271445mm
-VYcenter = 13.030000;  %!! must be >13.134083-0.8
+VXcenter = 12.215000;      % Value when PM stage was added: 12.271445mm
+VYcenter = 13.075000;  %!! must be >13.134083-0.8
 Vbacklash= 0.005;
 
 % Vortex scan properties
 %To include center values as a point in scan; use ODD number of points
 % !!! THIS IS VY !!!
-VYpoints = 3;% Number of Y points in scan
+VYpoints = 5;% Number of Y points in scan
 % !!! THIS IS VX !!!
 VXpoints = VYpoints; % Number of X points in scan
 
 % Vortex step params in [mm]  
-vStepRange = min(0.025,0.8);   %Vortex will be scanned +/- this value
+vStepRange = min(0.02,0.8);   %Vortex will be scanned +/- this value
                     % ie. scan will be: 
                     % [VXcen-vStepRa to VXcen+vStepRa] w/ Vxpoi steps
 %~~ END ZABER STUFF 
 
 %~~ PIEZO STUFF 
 % Fiber center of scan in Volts
-Xcenter = 87.50;
-Ycenter = 72.00;
-Zcenter = 70.00;
+Xcenter = 97.25;
+Ycenter = 56.00;
+Zcenter = 55.00;
 
 % Fiber scan properties
 %To include center values as a point in scan; use EVEN number of points
-Xpoints = 40;% number of X points in scan (actual scan will have +1)
+Xpoints = 30;% number of X points in scan (actual scan will have +1)
 Ypoints = Xpoints; % Ycenter/Xcenter will be an extra point in the middle
-Zpoints = 1; %number of focci taken
+Zpoints = 4; %number of focci taken
 
 % Fiber step sizes in Volts
-refStep   = 3; % refStep is the step size for a full PSF with a 10*10 grid
+refStep   = 2; % refStep is the step size for a full PSF with a 10*10 grid
 StepSize  = refStep/(Xpoints/10);
 ZStepSize = 15;
 backlash  = 10; % Kept backlash in to see if it did anything
@@ -103,7 +103,7 @@ fprintf('Delay in use: %0.1f\n', Delay)
 
 %~~ RED (NORM) POWER METER STUFF 
 pmNread = 100;      % Number of samples to take
-isPMNorm = false;   % Flag to mark whether this PM should be read
+isPMNorm = true;   % Flag to mark whether this PM should be read
                         % This flag is useful in case the PM is not in the
                         % system. NaN will replace the pmRead values.
 %~~ END RED (NORM) POWER METER STUFF
@@ -164,12 +164,16 @@ fprintf('Current Gain setting: %i\n', FMTO_scale)
 %-- Connect to red PM only if it will be used
 if isPMNorm
     % Find a VISA-USB object.
-    obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x1313::0x8078::P0015560::0::INSTR', 'Tag', '');
+        % NOTE: check the SN on the device. The 2 student-lab PM100D's are:
+        %   P0015519    and     P0015560
+    obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x1313::0x8078::P0015519::0::INSTR', 'Tag', '');
 
     % Create the VISA-USB object if it does not exist
     % otherwise use the object that was found.
     if isempty(obj1)
-        obj1 = visa('NI', 'USB0::0x1313::0x8078::P0015560::0::INSTR');
+        % NOTE: check the SN on the device. The 2 student-lab PM100D's are:
+            %   P0015519    and     P0015560
+        obj1 = visa('NI', 'USB0::0x1313::0x8078::P0015519::0::INSTR');
     else
         fclose(obj1);
         obj1 = obj1(1);
