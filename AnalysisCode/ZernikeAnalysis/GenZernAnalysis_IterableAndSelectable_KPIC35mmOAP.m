@@ -121,7 +121,7 @@ modRemove = [1,2,3];  %Vector representing modes to remove. DOES NOT FOLLOW REGU
         %First few modes: 1 = piston, 2 = tip, 3 = tilt, 4 = Astig Y, 5 = Focus, 6 = Astig 45
         
 %% Begin Code_______________
-addpath('C:\Users\Daniel\Documents\Mawet201718')
+addpath('C:\Users\danie\Documents\MATLAB\VFN-Lab\AnalysisCode\ZernikeAnalysis')
 m2nm    = 1e9;      %micrometer to nanometer conversion 
 
 %% Calculate Analysis Region
