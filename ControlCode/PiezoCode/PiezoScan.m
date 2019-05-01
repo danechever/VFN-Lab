@@ -643,7 +643,7 @@ fits.closeFile(fitmap);
 %% Report results
 
 %-- Use user-provided norm value if desired
-if isPMNorm
+if ~isPMNorm
     pmRead1 = pmNormReport;
 end
 
