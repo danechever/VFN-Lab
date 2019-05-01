@@ -105,7 +105,12 @@ fprintf('Delay in use: %0.1f\n', Delay)
 pmNread = 100;      % Number of samples to take
 isPMNorm = true;   % Flag to mark whether this PM should be read
                         % This flag is useful in case the PM is not in the
-                        % system. NaN will replace the pmRead values.
+                        % system. -9999 will replace the pmRead values.
+pmNormReport = 14.08;   % Valu for fibertip power when isPMNorm=false. Only
+                        % affects the printed values at end; NORM'd cube
+                        % values are still un-normed. SET =1 to not norm
+                        % the printed values.
+                        
 %~~ END RED (NORM) POWER METER STUFF
 %% Zaber Setup
 if isVortScan && ~isZab
@@ -636,6 +641,12 @@ fits.closeFile(fitmap);
 
 
 %% Report results
+
+%-- Use user-provided norm value if desired
+if isPMNorm
+    pmRead1 = pmNormReport;
+end
+
 % Take average of all the Nread
 meas1 = measScl;
 % Crop the matrix to middle (cropVal-2)/cropVal region to be in donut null for min
