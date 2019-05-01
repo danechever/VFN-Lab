@@ -39,10 +39,10 @@ clear all
 %% General settings 
 
 % Directory for saving data:
-svFld = 'C:\Users\AOlab1\Desktop\DE2\VFN\PupilVFNCoupling\042419_VPL1';
+svFld = 'C:\Users\AOlab1\Desktop\DE2\VFN\PupilVFNCoupling\050119_VPL2';
 
 % Experiment name for figures
-expNm = '15Don_FocScan1';
+expNm = '1PSF_StartOfDay1';
 
 %~~ ZABER STUFF 
 % Flag to enable zaber motion (including centering)
@@ -77,10 +77,10 @@ Zcenter = 55.00;
 %To include center values as a point in scan; use EVEN number of points
 Xpoints = 30;% number of X points in scan (actual scan will have +1)
 Ypoints = Xpoints; % Ycenter/Xcenter will be an extra point in the middle
-Zpoints = 4; %number of focci taken
+Zpoints = 1; %number of focci taken
 
 % Fiber step sizes in Volts
-refStep   = 2; % refStep is the step size for a full PSF with a 10*10 grid
+refStep   = 8; % refStep is the step size for a full PSF with a 10*10 grid
 StepSize  = refStep/(Xpoints/10);
 ZStepSize = 15;
 backlash  = 10; % Kept backlash in to see if it did anything
@@ -103,7 +103,7 @@ fprintf('Delay in use: %0.1f\n', Delay)
 
 %~~ RED (NORM) POWER METER STUFF 
 pmNread = 100;      % Number of samples to take
-isPMNorm = true;   % Flag to mark whether this PM should be read
+isPMNorm = false;   % Flag to mark whether this PM should be read
                         % This flag is useful in case the PM is not in the
                         % system. -9999 will replace the pmRead values.
 pmNormReport = 14.08;   % Valu for fibertip power when isPMNorm=false. Only
@@ -687,12 +687,18 @@ mxVal = max(meas3(:));
 fprintf('\nMax in min Frame:        %f', mxVal)
 fprintf('\nMax/Min, min Frame-dark: %f', mxVal/mnVal)
 %fprintf('\nMax/Min ratio-dark:      %f\n', (mxVal-0.005)/(mnVal-0.005))
+if ~isPMNorm
+    fprintf('\nWARN: redPM not used; fib tip power provided by user');
+end
 fprintf('\nPower on Fiber tip:      %f', pmRead1);
 fprintf('\nMin, PM normed (eta_s):  %f', mnVal/pmRead1);
 fprintf('\nMax, PM normed (eta_p):  %f\n', mxVal/pmRead1);
 
 if ~sum(strfind(expNm, 'PSF'))
     % Assume we are analyzing a donut
+    if ~isPMNorm
+        fprintf('\n      WARN: redPM not used; fib tip power provided by user');
+    end
     fprintf('\n      - Ratio in Frame = (%f/%f) - bias corr.------> = %0.2f\n', mxVal, mnVal, mxVal/mnVal)
     fprintf('      - Eta_s = (%f/%f) w/ approx vals for thrpt -> = %f\n', mnVal, pmRead1, mnVal/pmRead1)
     fprintf('      - Eta_p = (%f/%f) w/ approx vals for thrpt -> = %f\n', mxVal, pmRead1, mxVal/pmRead1)
@@ -706,6 +712,9 @@ else
         '\n  VY ind  = %3i, VY  =  %0.6f mm'], ...
         mxI1, distX(mxI1), mxI2, distY(mxI2), ...
         mxI4, distZ(mxI4), mxI5, distVX(mxI5), mxI6, distVY(mxI6));
+    if ~isPMNorm
+        fprintf('\n      WARN: redPM not used; fib tip power provided by user');
+    end
     fprintf('\n      - Max:                        %f', mxVal2)
     fprintf('\n      - Power on Fiber tip:         %f',pmRead1)
     fprintf('\n      - Max, PM normed (coupling):  %f\n',mxVal2/pmRead1)
