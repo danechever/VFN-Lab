@@ -171,14 +171,16 @@ if isPMNorm
     % Find a VISA-USB object.
         % NOTE: check the SN on the device. The 2 student-lab PM100D's are:
         %   P0015519    and     P0015560
-    obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x1313::0x8078::P0015519::0::INSTR', 'Tag', '');
+        % our VFN PM100D is: P0022602
+    obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x1313::0x8078::P0022602::0::INSTR', 'Tag', '');
 
     % Create the VISA-USB object if it does not exist
     % otherwise use the object that was found.
     if isempty(obj1)
         % NOTE: check the SN on the device. The 2 student-lab PM100D's are:
-            %   P0015519    and     P0015560
-        obj1 = visa('NI', 'USB0::0x1313::0x8078::P0015519::0::INSTR');
+        %   P0015519    and     P0015560
+        % our VFN PM100D is: P0022602
+        obj1 = visa('NI', 'USB0::0x1313::0x8078::P0022602::0::INSTR');
     else
         fclose(obj1);
         obj1 = obj1(1);
@@ -220,14 +222,14 @@ scales  = nan(sclSz);   %Matrix for scales, gains, and biases
 
 if isZab
 	%remove zaber X backlash
-    VFN_Zab_move(vortX, VXcenter-Vbacklash);
+    VFN_Zab_move(vortX, distVX(1)-Vbacklash);
 end
 for a = 1:length(distVX)
     if isZab
         %move vortex to new X position
         fprintf('\nVortX pos: %f',VFN_Zab_move(vortX, distVX(a)));
         %remove zaber y backlash
-        VFN_Zab_move(vortY, VYcenter-Vbacklash);
+        VFN_Zab_move(vortY, distVY(1)-Vbacklash);
     end
     for b = 1:length(distVY)
         if isZab
