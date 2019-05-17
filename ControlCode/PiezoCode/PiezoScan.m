@@ -22,7 +22,7 @@
     - Added isPMNorm flag to choose whether red PM is read or not
     - When red PM is not read, -9999 is saved as pmRead value in the data
         cube and the normed cube is "normed" by 1. Also, all values
-        reported at end of script are normed by 1.
+        reported at end of script are normed by user provided value.
     - Added isPMNorm flag to keywords of data and normed cubes
     * Also, fixed path in first line to reflect the fact that all the
         control code is now in a git repo
@@ -441,7 +441,7 @@ if isPMNorm
     % Convert the calibration PM value from W to uW
     pmRead1 = pmRead1*10^6;
     % Translate the calibration PM value from uW to V (at 10^6)
-    pmRead1 = pmRead1*0.63;     % V/uW conversion is ~ 0.63
+    pmRead1 = pmRead1*0.90;     % V/uW conversion is ~ 0.63 @633; ~0.9 @ 780
 else
     %-- When PM was not read, set normalization value to 1
     pmRead1 = 1;

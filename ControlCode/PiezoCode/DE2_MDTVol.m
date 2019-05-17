@@ -79,7 +79,7 @@ function rVol = DE2_MDTVol(MDT, Vol, Cha, RW)
             rVol = str2double(rVol(4:end-1));%Convert to number
             
             %Check whether further iteration is needed
-            fla = abs(Vol-rVol)>.15;         %.05 to avoid infinite loop
+            fla = abs(Vol-rVol)>.3;         %.05 to avoid infinite loop
             
             %Increment and check counter; quite to avoid infinite loop
             lct = lct + 1;
