@@ -4,6 +4,8 @@ addpath(genpath('C:\Users\AOlab1\Desktop\DE2\VFN\VFN-Lab\ControlCode'));
 close all
 clear all
 
+global s min_hist
+
 %% Zaber Setup
 fprintf('\n-- Initializing Zabers')
 VFN_setUpZabers; % Instantiate the zabers
@@ -41,8 +43,6 @@ FMTO_scale = 6;     % The n in: 10^n for the gain setting
 % Other settings
 Nread   = 100;      % power samples at a given locaiton
 Nrate   = 1000;     % rate of scan [samples/second]
-
-global s
 
 % Setup Femto 
 VFN_setUpFMTO;
@@ -116,6 +116,10 @@ opts = optimoptions('patternsearch', 'StepTolerance', sTol, 'Display', 'iter');
 
 %% Perform minimization
 fprintf('\n-- Running Minimizer\n')
+%-- Define history vector to contain iteration information
+min_hist.X      = [];
+min_hist.PWR    = [];
+
 %-- Define iteration function
     % This moves the actuators to the new position and measures the donut power
 func = @(X) MinFunc_FiberScan(X, fibZ, MDT, FMTO_scale, nrmFac);

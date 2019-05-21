@@ -1,7 +1,7 @@
 function pwr = MinFunc_FiberScan(X, fibZ, MDT, FMTO_scale, nrmFac)
 % NOTE: backlash is always removed from zaber motion. Even when moving forward.
 
-global s
+global s min_hist
 
 %% Prep motion
 %-- Extract desired positions from vector
@@ -32,7 +32,7 @@ DE2_MDTVol(MDT, fibY, 'y', 0);
 
 %-- Move the Zaber
 % Remove backlash
-VFN_Zab_move(fibZ, focZ-0.005);
+VFN_Zab_move(fibZ, focZ-0.05);
 % Now move
 VFN_Zab_move(fibZ, focZ);
 
@@ -86,4 +86,8 @@ pwr = read - locBias;
 
 %-- Average and apply gain factor
 pwr = mean(pwr)*scales;
+
+%-- Save values in history struct
+min_hist.X      = [min_hist.X; [fibX, fibY, focZ]];
+min_hist.PWR    = [min_hist.PWR; pwr];
 end
