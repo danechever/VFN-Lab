@@ -1,11 +1,13 @@
-function pwr = MinFunc_FiberScan(X, fibZ, MDT, s, FMTO_scale)
+function pwr = MinFunc_FiberScan(X, fibZ, MDT, FMTO_scale, nrmFac)
 % NOTE: backlash is always removed from zaber motion. Even when moving forward.
+
+global s
 
 %% Prep motion
 %-- Extract desired positions from vector
 fibX = X(1);                % Fiber X position
 fibY = X(2);                % Fiber Y position
-focZ = X(3)/100;            % Fiber Z position [IN MILLIMETERS]
+focZ = X(3)/nrmFac;            % Fiber Z position [IN MILLIMETERS]
 
 %-- Check that all values are within physical range
 if ~(0<=fibX && fibX<=150)
@@ -16,7 +18,7 @@ if ~(0<=fibY && fibY<=150)
     % Y-piezo position is beyond range
     error('Desired fibY position (%f) is beyond allowable range', fibY)
 end
-if ~(0<=fibX && fibX<=7.8)
+if ~(0<=focZ && focZ<=7.8)
     % Z-Zaber position is beyond range
     error('Desired focZ position (%f) is beyond allowable range', focZ)
 end
@@ -47,7 +49,7 @@ old_read = mean(read);
 % Check if re-read is needed
 if old_scale ~= FMTO_scale
     % FMTO_scale changed so the gain changed
-    %fprintf('Femto gain was changed from %i to %i\n',old_scale, FMTO_scale)
+    fprintf('\nFemto gain was changed from %i to %i\n',old_scale, FMTO_scale)
     read    = startForeground(s);
     %ratio   = ratio * (old_read/mean(read));
     if FMTO_scale > 9

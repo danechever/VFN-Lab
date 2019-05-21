@@ -1,7 +1,11 @@
+%% add the necessary functions
+addpath(genpath('C:\Users\AOlab1\Desktop\DE2\VFN\VFN-Lab\ControlCode'));
 
-
+close all
+clear all
 
 %% Zaber Setup
+fprintf('\n-- Initializing Zabers')
 VFN_setUpZabers; % Instantiate the zabers
 
 % Relabel the variables for clarity
@@ -19,6 +23,7 @@ if exist('ax93', 'var')
 end    
 
 %% MDT (piezo) Setup
+fprintf('\n-- Initializing Piezos')
 %Create serial port and define communication properties
     %COM# changes between computers; must check in Device Manager
 MDT     = serial('COM4', 'BaudRate', 115200, 'InputBufferSize', 1500, ...
@@ -26,19 +31,25 @@ MDT     = serial('COM4', 'BaudRate', 115200, 'InputBufferSize', 1500, ...
 fopen(MDT);           %Connect port to device
 
 %% Femto setup
+fprintf('\n-- Initializing Femto')
 % Define the gain to apply for scaling. Uses same gain for all: gnFact^(FMTO_scale-6)
 %%% NOTE:::: The value below is hardcoded into MinFunc_FiberScan instead of here
 gnFact  = 9.97;
 
 % Starting gain
 FMTO_scale = 6;     % The n in: 10^n for the gain setting
+% Other settings
+Nread   = 100;      % power samples at a given locaiton
+Nrate   = 1000;     % rate of scan [samples/second]
+
+global s
 
 % Setup Femto 
-VFN_setUpFMTO;  
+VFN_setUpFMTO;
 
 s = VFN_FMTO_setGain(s, FMTO_scale);
 
-fprintf('Current Gain setting: %i\n', FMTO_scale)
+fprintf('\nCurrent Gain setting: %i\n', FMTO_scale)
 
 %% Define Search Parameters
 %-- Set initial params: 
@@ -48,15 +59,16 @@ fibY0 = 75;             % Fiber Y position
     % step tolerance can be used. (We want ~0.3V step tol for the piezos and ~
     % 3 microns for zabers. By scaling x100, 3 microns = 0.3 and thus we can
     % sharing same step tolerance for both actuator types.
-focZ0 = 3.65*100;      % Fiber Z position [in microns]
+nrmFac = 100;
+focZ0 = 3.64450*nrmFac;      % Fiber Z position [in microns]
 
 %-- Vectorize initial params
 X0 = [fibX0, fibY0, focZ0];
 
 %-- Set Bounds and Constraints
 % Bounds
-fibBnd = 25;                                %Max distance from fibX0/Y0
-focBnd = 500;                               %Max distance from focZ0
+fibBnd = 15;                                %Max distance from fibX0/Y0
+focBnd = 2;                                %Max distance from focZ0
 LB = [fibX0-fibBnd;                          %Lower bounds
       fibY0-fibBnd; 
       focZ0-focBnd];
@@ -76,6 +88,7 @@ nonlcon = [];
 sTol = .3;                     %Smallest step size
 
 opts = optimoptions('patternsearch', 'StepTolerance', sTol, 'Display', 'iter');
+%opts = optimoptions('fmincon', 'Algorithm', 'active-set', 'Display', 'iter', 'StepTolerance', sTol);
 
 % -------- Below is from VFN_An_LSQModelFitting ---------- %
 % %-- Set special minimization parameters
@@ -102,17 +115,18 @@ opts = optimoptions('patternsearch', 'StepTolerance', sTol, 'Display', 'iter');
 % options = optimoptions('patternsearch','PlotFcn','psplotbestf');
 
 %% Perform minimization
+fprintf('\n-- Running Minimizer\n')
 %-- Define iteration function
     % This moves the actuators to the new position and measures the donut power
-func = @(X) MinFunc_FiberScan(X, fibZ, MDT, s, FMTO_scale);
+func = @(X) MinFunc_FiberScan(X, fibZ, MDT, FMTO_scale, nrmFac);
 
 [X, fval, exitflag, ouput] = patternsearch(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
-
+%[X, fval, exitflag, ouput] = fmincon(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
 %% Close the connections to all devices
 %-- Set Femto back to 10^6 
 FMTO_scale = 6;
 s = VFN_FMTO_setGain(s, FMTO_scale);
-fprintf('\n Femto Gain set to %i',FMTO_scale);
+fprintf('\n Femto Gain set to %i\n',FMTO_scale);
 
 %-- Set X and Y axes to optimal position
 DE2_MDTVol(MDT, X(1), 'x', 0); 
@@ -123,7 +137,7 @@ delete(MDT);
 clear MDT;
 
 %-- Set focZ to optimal position
-VFN_Zab_move(fibZ, X(3));
+VFN_Zab_move(fibZ, X(3)/nrmFac);
 
 %-- Clean up
 VFN_cleanUpZabers;
@@ -136,3 +150,7 @@ end
 if exist('fibZ', 'var')
     clear fibZ
 end
+
+%% Print results
+fprintf('\n      - Null found =  %f', fval);
+fprintf('\n      - Ideal pos  =  (%5.2f V, %5.2f, %f mm)\n', X(1), X(2), X(3)/nrmFac);
