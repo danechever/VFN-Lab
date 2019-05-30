@@ -36,6 +36,9 @@ VFN_Zab_move(fibZ, focZ-0.05);
 % Now move
 VFN_Zab_move(fibZ, focZ);
 
+%-- Wait for power to settle (likely not needed but oh well)
+pause(0.1);
+
 %% Measure power
 %-- Measure null at new location
 % Take a sample reading at current power
@@ -50,7 +53,7 @@ old_read = mean(read);
 if old_scale ~= FMTO_scale
     % FMTO_scale changed so the gain changed
     fprintf('\nFemto gain was changed from %i to %i\n',old_scale, FMTO_scale)
-    read    = startForeground(s);
+    %read    = startForeground(s);
     %ratio   = ratio * (old_read/mean(read));
     if FMTO_scale > 9
         warning('Gain >9: %i',FMTO_scale)
@@ -82,10 +85,18 @@ switch FMTO_scale
         warning('No bias forFMTO_scale = %i\n',FMTO_scale)
         locBias = nan;
 end
-pwr = read - locBias;
 
-%-- Average and apply gain factor
-pwr = mean(pwr)*scales;
+%-- Take multiple samples at current location and settings
+%- Preallocate power vector
+pwr = nan(10,1);
+for i = 1:length(pwr)
+    pause(0.05);
+    read    = startForeground(s);
+    pwrtmp  = read - locBias;
+    %- Average and apply gain factor
+    pwr(i) = mean(pwrtmp)*scales;
+end
+pwr = mean(pwr);
 
 %-- Save values in history struct
 min_hist.X      = [min_hist.X; [fibX, fibY, focZ]];
