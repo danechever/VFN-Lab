@@ -1,7 +1,7 @@
-function pwr = MinFunc_FiberScan(X, fibZ, MDT, FMTO_scale, nrmFac)
+function pwr = MinFunc_FiberScan(X, fibZ, MDT, nrmFac)
 % NOTE: backlash is always removed from zaber motion. Even when moving forward.
 
-global s min_hist
+global s min_hist FMTO_scale
 
 %% Prep motion
 %-- Extract desired positions from vector
@@ -90,4 +90,5 @@ pwr = mean(pwr)*scales;
 %-- Save values in history struct
 min_hist.X      = [min_hist.X; [fibX, fibY, focZ]];
 min_hist.PWR    = [min_hist.PWR; pwr];
+min_hist.scales = [min_hist.scales; scales];
 end

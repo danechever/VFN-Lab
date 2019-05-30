@@ -4,7 +4,7 @@ addpath(genpath('C:\Users\AOlab1\Desktop\DE2\VFN\VFN-Lab\ControlCode'));
 close all
 clear all
 
-global s min_hist
+global s min_hist FMTO_scale
 
 %% Zaber Setup
 fprintf('\n-- Initializing Zabers')
@@ -85,7 +85,7 @@ nonlcon = [];
 
 
 %-- Set tolerance and step size values
-sTol = .3;                     %Smallest step size
+sTol = .01;                     %Smallest step size
 
 opts = optimoptions('patternsearch', 'StepTolerance', sTol, 'Display', 'iter');
 %opts = optimoptions('fmincon', 'Algorithm', 'active-set', 'Display', 'iter', 'StepTolerance', sTol);
@@ -119,10 +119,11 @@ fprintf('\n-- Running Minimizer\n')
 %-- Define history vector to contain iteration information
 min_hist.X      = [];
 min_hist.PWR    = [];
+min_hist.scales = [];
 
 %-- Define iteration function
     % This moves the actuators to the new position and measures the donut power
-func = @(X) MinFunc_FiberScan(X, fibZ, MDT, FMTO_scale, nrmFac);
+func = @(X) MinFunc_FiberScan(X, fibZ, MDT, nrmFac);
 
 [X, fval, exitflag, ouput] = patternsearch(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
 %[X, fval, exitflag, ouput] = fmincon(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
@@ -158,3 +159,9 @@ end
 %% Print results
 fprintf('\n      - Null found =  %f', fval);
 fprintf('\n      - Ideal pos  =  (%5.2f V, %5.2f, %f mm)\n', X(1), X(2), X(3)/nrmFac);
+
+
+figure; plot(min_hist.X(:,1)); title('X(1)');
+figure; plot(min_hist.X(:,2)); title('X(2)');
+figure; plot(min_hist.X(:,3)); title('X(3)');
+figure; plot(min_hist.PWR); title('PWR');
