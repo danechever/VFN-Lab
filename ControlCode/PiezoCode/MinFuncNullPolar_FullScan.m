@@ -2,7 +2,7 @@ function pwr = MinFuncNullPolar_FullScan(X, MDT, cent)
 % This only searches for the null in fiber X and Y positioning
 % ALSO, it uses polard coordinates in X so that bounds can be circular
 
-global s min_hist FMTO_scale
+global s min_hist FMTO_scale RBnd
 
 %% Prep motion
 %-- Extract desired positions from vector
@@ -17,18 +17,38 @@ fibY = fibR*sin(fibT);
 fibX = fibX + cent(1);
 fibY = fibY + cent(2);
 
+flg = false;
+if fibR > RBnd
+    pwr = 1000; 
+    flg = true;
+end
 %-- Check that all values are within physical range
 if ~(0<=fibX && fibX<=150)
     % X-piezo position is beyond range
-    error('Desired fibX position (%f) is beyond allowable range', fibX)
+    pwr = 1000; 
+    flg = true;
+    %error('Desired fibX position (%f) is beyond allowable range', fibX)
 end
 if ~(0<=fibY && fibY<=150)
     % Y-piezo position is beyond range
-    error('Desired fibY position (%f) is beyond allowable range', fibY)
+    pwr = 1000; 
+    flg = true;
+    %error('Desired fibY position (%f) is beyond allowable range', fibY)
+end
+
+if flg
+    %-- Save values in history struct
+    min_hist.X      = [min_hist.X; [fibX, fibY, fibR, fibT]];
+    min_hist.PWR    = [min_hist.PWR; pwr];
+    min_hist.scales = [min_hist.scales; nan];
+    return
 end
 
 %% Move
 %-- Move the Piezos
+% Remove backlash by going back to 5V every time
+DE2_MDTVol(MDT, 5, 'x', 0);
+DE2_MDTVol(MDT, 5, 'y', 0);
 % Move in X
 DE2_MDTVol(MDT, fibX, 'x', 0);
 % Move in Y

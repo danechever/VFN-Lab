@@ -10,22 +10,40 @@ fibX = X(1);                % Fiber X position
 fibY = X(2);                % Fiber Y position
 focZ = X(3)/nrmFac;            % Fiber Z position [IN MILLIMETERS]
 
+flg = false;
 %-- Check that all values are within physical range
 if ~(0<=fibX && fibX<=150)
     % X-piezo position is beyond range
-    error('Desired fibX position (%f) is beyond allowable range', fibX)
+    pwr = 1000; 
+    flg = true;
+    %error('Desired fibX position (%f) is beyond allowable range', fibX)
 end
 if ~(0<=fibY && fibY<=150)
     % Y-piezo position is beyond range
-    error('Desired fibY position (%f) is beyond allowable range', fibY)
+    pwr = 1000;
+    flg = true;
+    %error('Desired fibY position (%f) is beyond allowable range', fibY)
 end
 if ~(0<=focZ && focZ<=7.8)
     % Z-Zaber position is beyond range
-    error('Desired focZ position (%f) is beyond allowable range', focZ)
+    pwr = 1000; 
+    flg = true;
+    %error('Desired focZ position (%f) is beyond allowable range', focZ)
+end
+
+if flg
+    %-- Save values in history struct
+    min_hist.X      = [min_hist.X; [fibX, fibY, focZ]];
+    min_hist.PWR    = [min_hist.PWR; pwr];
+    min_hist.scales = [min_hist.scales; nan];
+    return
 end
 
 %% Move
 %-- Move the Piezos
+% Remove backlash by going back to 5V every time
+DE2_MDTVol(MDT, 5, 'x', 0);
+DE2_MDTVol(MDT, 5, 'y', 0);
 % Move in X
 DE2_MDTVol(MDT, fibX, 'x', 0);
 % Move in Y

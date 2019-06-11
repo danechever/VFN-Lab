@@ -15,7 +15,7 @@ addpath(genpath('C:\Users\AOlab1\Desktop\DE2\VFN\VFN-Lab\ControlCode'));
 close all
 clear all
 
-global s min_hist FMTO_scale
+global s min_hist FMTO_scale RBnd
 
 %% Zaber Setup
 fprintf('\n-- Initializing Zabers')
@@ -75,11 +75,11 @@ beq = [];
 nonlcon = [];
 
 %-- Set tolerance and step size values
-sTol = .01;                     %Smallest step size
+sTol = .2;                     %Smallest step size
 
 %-- Set Options
-opts = optimoptions('patternsearch', 'StepTolerance', sTol, 'Display', 'iter');
-%opts = optimoptions('fmincon', 'Algorithm', 'active-set', 'Display', 'iter', 'StepTolerance', sTol);
+%opts = optimoptions('patternsearch', 'StepTolerance', sTol, 'Display', 'iter');
+%opts = optimoptions('fmincon', 'Algorithm', 'active-set', 'Display', 'iter', 'StepTolerance', sTol, 'FunctionTolerance', 0.01);
 
 % -------- Below is from VFN_An_LSQModelFitting ---------- %
 % %-- Set special minimization parameters
@@ -114,12 +114,15 @@ dist = [distX' distY'];
 
 %% Course raster to see donut in general
 measScl = CourseRaster_FullScan(MDT, dist);
+figure; imagesc(distX, distY, transpose(measScl));    % Transpose so that axes are physically oriented
+title('Initial Raster - for Peak');
+axis image; axis xy;
 
 %% Minimize to Find Peak 
 %%--- Define Search Parameters for finding peak
 %-- Use peak in course scan as starting point
 [pkVal, pkInd] = max(measScl(:));
-[pkX, pkY] = ind2sub(size(meas1), pkInd);
+[pkX, pkY] = ind2sub(size(measScl), pkInd);
 
 %-- Set initial params: 
 fibX0 = distX(pkX);             % Fiber X position [in V]
@@ -128,7 +131,7 @@ fibY0 = distY(pkY);             % Fiber Y position [in V]
     % step tolerance can be used. (We want ~0.3V step tol for the piezos and ~
     % 3 microns for zabers. By scaling x100, 3 microns = 0.3 and thus we can
     % sharing same step tolerance for both actuator types.
-focZ0 = 3.64450*nrmFac;      % Fiber Z position [in mm converted 10s of microns]
+focZ0 = VFN_Zab_getPos(fibZ)*nrmFac;      % Fiber Z position [in mm converted 10s of microns]
 
 %-- Vectorize initial params
 X0 = [fibX0, fibY0, focZ0];
@@ -145,7 +148,7 @@ UB = [fibX0+fibBnd;                          %Upper bounds
       focZ0+focBnd];
 % Make sure bounds don't go beyond range
 LB = max(LB, [0;0;0]);
-UB = min(UB, [150,150,7.8]);
+UB = min(UB, [150;150;7.8*nrmFac]);
 
 %%--- Perform Peak Search
 fprintf('\n-- Searching for Peak\n')
@@ -158,8 +161,10 @@ min_hist.scales = [];
     % This moves the actuators to the new position and measures the power
 func = @(X) MinFuncPeak_FullScan(X, fibZ, MDT, nrmFac);
 
-[X, fval, exitflag, ouput] = patternsearch(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
+%[X, fval, exitflag, ouput] = patternsearch(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
 %[X, fval, exitflag, ouput] = fmincon(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
+opts = optimset('Display', 'iter', 'TolX', 0.75, 'TolFun', 0.05, 'MaxFunEvals', 250);
+[X, fval, exitflag, output] = fminsearch(func, X0, opts);
 
 %%--- Print results
 fprintf('\n      - Peak found =  %f', fval);
@@ -184,21 +189,24 @@ measScl = CourseRaster_FullScan(MDT, dist);
 %flThs(fl>pkVal/3) = fl(fl>pkVal/3);
 %[cent, radi] = imfindcircles(flThs,[4,15], 'Sensitivity',0.95)
 %-- Search for circles in the scan
-[cent, radi] = imfindcircles(measScl,[4,13], 'Sensitivity',0.97);
-%-- Plot results
-figure; imagesc(measScl);
-viscircles(cent,radi);
+[cent, radi] = imfindcircles(transpose(measScl),[3,13], 'Sensitivity',0.97);
 %-- Translate center coords from pixels to voltages
 cent = [distX(round(cent(1))) distY(round(cent(2)))];
 %-- Convert to polar for circular bounds
 [pX, pY] = meshgrid(distX-cent(1), distY-cent(2));
 [TH, R]  = cart2pol(pX, pY);
 %-- Find null within circular bounds to use as starting point for scan
-measIN = measScl;
+measIN = transpose(measScl);
 measIN(R>radi*rstStp) = nan;
 [nlVal, nlInd] = min(measIN(:));
-[nlX, nlY] = ind2sub(size(measIN),nlInd);
+[nlY, nlX] = ind2sub(size(measIN),nlInd);   % reversed order since transposed measIN
 nlX = distX(nlX); nlY = distY(nlY);     % Translate to voltages
+nlX = nlX - cent(1); nlY = nlY-cent(2);
+%-- Plot results
+figure; imagesc(distX, distY, transpose(measScl));    % Transpose so that axes are physically oriented
+viscircles(cent,radi*rstStp);
+axis image; axis xy;
+title('Focused Raster - for Null');
 
 %% Minimize to Find null 
 %%--- Define Search Parameters for finding null
@@ -211,10 +219,11 @@ X0 = [fibR0, fibT0];
 
 %-- Set Bounds and Constraints
 % Bounds
-RBnd = rstStp*radi;                    %Max distance from fibR0 [in V]
+RBnd = 19*rstStp*radi/20;           %Max distance from fibR0 [in V]
+%RBnd = min(cat(2, RBnd, cent, [150 150]-cent));  % Keep search region within limits 
 LB = [0;                          %Lower bounds
       0];
-UB = [fibR0+RBnd;                 %Upper bounds
+UB = [RBnd;                 %Upper bounds
       2*pi];
 
 %%--- Perform Null Search
@@ -228,19 +237,22 @@ min_hist.scales = [];
     % This moves the actuators to the new position and measures the power
 func = @(X) MinFuncNullPolar_FullScan(X, MDT, cent);
 
-[X, fval, exitflag, ouput] = patternsearch(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
-%[X, fval, exitflag, ouput] = fmincon(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
+%[X, fval, exitflag, output] = patternsearch(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
+%[X, fval, exitflag, output] = fmincon(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
+opts = optimset('Display', 'iter', 'TolX', sTol, 'TolFun', 0.001, 'MaxFunEvals', 250);
+[X, fval, exitflag, output] = fminsearch(func, X0, opts);
 
 %%--- Print results
-fprintf('\n      - Peak found =  %f', fval);
-fprintf('\n      - Ideal pos  =  (R=%5.2f V, Th=%5.2f rad)\n', X(1), X(2));
-fprintf('\n      - Ideal pos  =  (X=%5.2f V, Y=%5.2f V)\n', X(1)*cos(X(2)), X(1)*sin(X(2)));
+fprintf('\n      - Null found =  %f', fval);
+fprintf('\n      - Ideal pos  =  (R=%5.2f V, Th=%5.2f rad)', X(1), X(2));
+fprintf('\n      - Ideal pos  =  (X=%5.2f V, Y=%5.2f V)\n', X(1)*cos(X(2))+cent(1), X(1)*sin(X(2))+cent(2));
 
 figure; plot(min_hist.X(:,1)); title('fibX');
 figure; plot(min_hist.X(:,2)); title('fibY');
 figure; plot(min_hist.X(:,3)); title('fibR');
 figure; plot(min_hist.X(:,4)); title('fibT');
 figure; plot(min_hist.PWR); title('PWR');
+ylim([0,1])
 
 %% Close the connections to all devices
 %-- Set Femto back to 10^6 
@@ -249,15 +261,12 @@ s = VFN_FMTO_setGain(s, FMTO_scale);
 fprintf('\n Femto Gain set to %i\n',FMTO_scale);
 
 %-- Set X and Y axes to optimal position
-DE2_MDTVol(MDT, X(1), 'x', 0); 
-DE2_MDTVol(MDT, X(2), 'y', 0);
+DE2_MDTVol(MDT, X(1)*cos(X(2)), 'x', 0); 
+DE2_MDTVol(MDT, X(1)*sin(X(2)), 'y', 0);
 
 fclose(MDT);
 delete(MDT);
 clear MDT;
-
-%-- Set focZ to optimal position
-VFN_Zab_move(fibZ, X(3)/nrmFac);
 
 %-- Clean up
 VFN_cleanUpZabers;
