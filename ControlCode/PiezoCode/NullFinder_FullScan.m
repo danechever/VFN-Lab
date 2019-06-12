@@ -15,8 +15,24 @@ addpath(genpath('C:\Users\AOlab1\Desktop\DE2\VFN\VFN-Lab\ControlCode'));
 close all
 clear all
 
-global s min_hist FMTO_scale RBnd
+global s itr pk_min_hists nl_min_hists FMTO_scale RBnd 
 
+%% Run Parameters
+
+%*** NOTE: make sure you've turned on and set the power level on the superK
+%   before running this script. The script will take care of wavelength stuff
+%   but it assumes the superK is already on and at the desired power.
+% -- Use "VFN_NKT_quickSet" if needed
+
+isvaria = false;         % Flag to use varia/superK
+lams    = [633, 780];   % Wavelengths to use
+bwd     = 3;            % Bandwidth to use (nm)
+
+%% Varia/SuperK setup
+if isvaria
+    fprintf('\n-- Initializing Varia')
+    VFN_setUpNKT;   % Instantiate the NKT (will be "NKT" variable)
+end
 %% Zaber Setup
 fprintf('\n-- Initializing Zabers')
 VFN_setUpZabers; % Instantiate the zabers
@@ -77,9 +93,13 @@ nonlcon = [];
 %-- Set tolerance and step size values
 sTol = .2;                     %Smallest step size
 
+%-- Maximum number of function evals in minimizer
+nFunEvals = 250;
+
 %-- Set Options
 %opts = optimoptions('patternsearch', 'StepTolerance', sTol, 'Display', 'iter');
 %opts = optimoptions('fmincon', 'Algorithm', 'active-set', 'Display', 'iter', 'StepTolerance', sTol, 'FunctionTolerance', 0.01);
+% ** Options are defined individually per minimizer below
 
 % -------- Below is from VFN_An_LSQModelFitting ---------- %
 % %-- Set special minimization parameters
@@ -112,8 +132,41 @@ rstStp = 10;
 distX=5:rstStp:145; distY = distX;
 dist = [distX' distY'];
 
+%% Prepare for main loop (iterating through wavelengths)
+if ~isvaria
+    % Set lams to nan since we won't be using the varia but need single loop itr
+    lams = [nan];
+end
+
+%-- Pre-allocate data matrices
+nlam = length(lams);
+% Matrix of raster scan images
+pk_rasters = nan(nlam, lenght(distY), length(distX));
+nl_rasters = pk_rasters;
+% Struct of iteration history values
+pk_min_hists.X    = nan(nlam, nFunEvals, 3);        % State vector (peak scan)
+pk_min_hists.PWR  = nan(nlam, nFunEvals);           % Measured power (peak scan)
+pk_min_hists.SCLS = nan(nlam, nFunEvals);           % Scaling factor used (peak scan)
+nl_min_hists.X    = nan(nlam, nFunEvals, 4);        % State vector (null scan)
+nl_min_hists.PWR  = pk_min_hists.PWR;               % Measured power (null scan)
+nl_min_hists.SCLS = pk_min_hists.SCLS;              % Scaling factor used (null scan)
+% Minimization solutions
+pk_fval = nan(nlam);        % Peak found
+pk_X    = nan(nlam, 3);     % Ideal state vector    [X, Y, Z]
+% Minimization solutions
+nl_fval = nan(nlam);        % Null found
+nl_X    = nan(nlam, 2);     % Ideal state vector    [X, Y]
+
+%% Main loop
+for iii = 1:nlam
+if isvaria
+    % Set varia wavelength
+    VFN_NKT_setWvlRange(NKT, lams(iii)-bwd/2, lams(iii)+bwd/2);
+    fprintf('\n-- Wavelength set to %f nm\n', lams(iii));
+end
 %% Course raster to see donut in general
 measScl = CourseRaster_FullScan(MDT, dist);
+pk_rasters(iii,:,:) = measScl;
 figure; imagesc(distX, distY, transpose(measScl));    % Transpose so that axes are physically oriented
 title('Initial Raster - for Peak');
 axis image; axis xy;
@@ -152,34 +205,40 @@ UB = min(UB, [150;150;7.8*nrmFac]);
 
 %%--- Perform Peak Search
 fprintf('\n-- Searching for Peak\n')
-%-- Define history vector to contain iteration information
-min_hist.X      = [];
-min_hist.PWR    = [];
-min_hist.scales = [];
+fprintf('   Initial guess: (%f V, %f V, %f mm)\n', X0(1), X0(2), X0(3)/nrmFac);
 
 %-- Define iteration function
     % This moves the actuators to the new position and measures the power
 func = @(X) MinFuncPeak_FullScan(X, fibZ, MDT, nrmFac);
 
+%-- Set iteration counter for minimizer correctly
+itr = [iii, 1];        % Iteration marker [itr(1) = nlam, itr(2) = nFunEval]
+
 %[X, fval, exitflag, ouput] = patternsearch(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
 %[X, fval, exitflag, ouput] = fmincon(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
-opts = optimset('Display', 'iter', 'TolX', 0.75, 'TolFun', 0.05, 'MaxFunEvals', 250);
+opts = optimset('Display', 'iter', 'TolX', 0.75, 'TolFun', 0.05, 'MaxFunEvals', nFunEvals);
 [X, fval, exitflag, output] = fminsearch(func, X0, opts);
 
 %%--- Print results
 fprintf('\n      - Peak found =  %f', fval);
 fprintf('\n      - Ideal pos  =  (%5.2f V, %5.2f, %f mm)\n', X(1), X(2), X(3)/nrmFac);
 
-figure; plot(min_hist.X(:,1)); title('X(1)');
-figure; plot(min_hist.X(:,2)); title('X(2)');
-figure; plot(min_hist.X(:,3)); title('X(3)');
-figure; plot(min_hist.PWR); title('PWR');
+%-- Save results
+pk_fval(iii) = fval;
+pk_X(iii,:) = X./[1,1,nrmFac];  %nrmFac to account for scaling
+
+%-- Display results
+figure; plot(pk_min_hists.X(iii,:,1)); title('X(1)');
+figure; plot(pk_min_hists.X(iii,:,2)); title('X(2)');
+figure; plot(pk_min_hists.X(iii,:,3)); title('X(3)');
+figure; plot(pk_min_hists.PWR(iii,:)); title('PWR');
 
 %% Course raster at ideal focus to get fresh donut
 %-- Set focZ to optimal position
 VFN_Zab_move(fibZ, X(3)/nrmFac);
 %-- Do raster
 measScl = CourseRaster_FullScan(MDT, dist);
+nl_rasters(iii,:,:) = measScl;
 
 %% Find donut in image
 %fl = fitsread('5Don_780NullNew1_20x20_SEMIREDU.fits');
@@ -228,18 +287,18 @@ UB = [RBnd;                 %Upper bounds
 
 %%--- Perform Null Search
 fprintf('\n-- Searching for Null\n')
-%-- Define history vector to contain iteration information
-min_hist.X      = [];
-min_hist.PWR    = [];
-min_hist.scales = [];
+fprintf('   Initial guess: (R=%f V, TH=%f rad, X=%f V, Y=%f V)\n', X0(1), X0(2), X0(1)*cos(X0(2))+cent(1), X0(1)*sin(X0(2))+cent(2));
 
 %-- Define iteration function
     % This moves the actuators to the new position and measures the power
 func = @(X) MinFuncNullPolar_FullScan(X, MDT, cent);
 
+%-- (re)Set iteration counter for minimizer correctly
+itr = [iii, 1];        % Iteration marker [itr(1) = nlam, itr(2) = nFunEval]
+
 %[X, fval, exitflag, output] = patternsearch(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
 %[X, fval, exitflag, output] = fmincon(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
-opts = optimset('Display', 'iter', 'TolX', sTol, 'TolFun', 0.001, 'MaxFunEvals', 250);
+opts = optimset('Display', 'iter', 'TolX', sTol, 'TolFun', 0.001, 'MaxFunEvals', nFunEvals);
 [X, fval, exitflag, output] = fminsearch(func, X0, opts);
 
 %%--- Print results
@@ -247,12 +306,17 @@ fprintf('\n      - Null found =  %f', fval);
 fprintf('\n      - Ideal pos  =  (R=%5.2f V, Th=%5.2f rad)', X(1), X(2));
 fprintf('\n      - Ideal pos  =  (X=%5.2f V, Y=%5.2f V)\n', X(1)*cos(X(2))+cent(1), X(1)*sin(X(2))+cent(2));
 
-figure; plot(min_hist.X(:,1)); title('fibX');
-figure; plot(min_hist.X(:,2)); title('fibY');
-figure; plot(min_hist.X(:,3)); title('fibR');
-figure; plot(min_hist.X(:,4)); title('fibT');
-figure; plot(min_hist.PWR); title('PWR');
+%-- Save minimization results
+nl_fval(iii) = fval;
+nl_X(iii,:) =  [X(1)*cos(X(2))+cent(1), X(1)*sin(X(2))+cent(2)];
+
+figure; plot(nl_min_hists.X(iii,:,1)); title('fibX');
+figure; plot(nl_min_hists.X(iii,:,2)); title('fibY');
+figure; plot(nl_min_hists.X(iii,:,3)); title('fibR');
+figure; plot(nl_min_hists.X(iii,:,4)); title('fibT');
+figure; plot(nl_min_hists.PWR(iii,:)); title('PWR');
 ylim([0,1])
+end
 
 %% Close the connections to all devices
 %-- Set Femto back to 10^6 
@@ -260,7 +324,7 @@ FMTO_scale = 6;
 s = VFN_FMTO_setGain(s, FMTO_scale);
 fprintf('\n Femto Gain set to %i\n',FMTO_scale);
 
-%-- Set X and Y axes to optimal position
+%-- Set X and Y axes to last optimal position
 DE2_MDTVol(MDT, X(1)*cos(X(2)), 'x', 0); 
 DE2_MDTVol(MDT, X(1)*sin(X(2)), 'y', 0);
 

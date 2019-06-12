@@ -2,7 +2,7 @@ function pwr = MinFuncNullPolar_FullScan(X, MDT, cent)
 % This only searches for the null in fiber X and Y positioning
 % ALSO, it uses polard coordinates in X so that bounds can be circular
 
-global s min_hist FMTO_scale RBnd
+global s itr nl_min_hists FMTO_scale RBnd
 
 %% Prep motion
 %-- Extract desired positions from vector
@@ -38,9 +38,11 @@ end
 
 if flg
     %-- Save values in history struct
-    min_hist.X      = [min_hist.X; [fibX, fibY, fibR, fibT]];
-    min_hist.PWR    = [min_hist.PWR; pwr];
-    min_hist.scales = [min_hist.scales; nan];
+    % Increment itr counter
+    itr(2) = itr(2) + 1;
+    nl_min_hists.X(itr(1),itr(2),:)   = [fibX, fibY, fibR, fibT];
+    nl_min_hists.PWR(itr(1), itr(2))  = pwr;
+    nl_min_hists.SCLS(itr(1), itr(2)) = nan;
     return
 end
 
@@ -117,7 +119,9 @@ end
 pwr = mean(pwr);
 
 %-- Save values in history struct
-min_hist.X      = [min_hist.X; [fibX, fibY, fibR, fibT]];
-min_hist.PWR    = [min_hist.PWR; pwr];
-min_hist.scales = [min_hist.scales; scales];
+% Increment itr counter
+itr(2) = itr(2) + 1;
+nl_min_hists.X(itr(1),itr(2),:)   = [fibX, fibY, fibR, fibT];
+nl_min_hists.PWR(itr(1), itr(2))  = pwr;
+nl_min_hists.SCLS(itr(1), itr(2)) = scales;
 end

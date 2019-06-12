@@ -2,7 +2,7 @@ function pwr = MinFuncPeak_FullScan(X, fibZ, MDT, nrmFac)
 % NOTE: backlash is always removed from zaber motion. Even when moving forward.
 % This only searches for the peak coupling and will use X,Y, and Foc
 
-global s min_hist FMTO_scale
+global s itr pk_min_hists FMTO_scale
 
 %% Prep motion
 %-- Extract desired positions from vector
@@ -33,9 +33,11 @@ end
 
 if flg
     %-- Save values in history struct
-    min_hist.X      = [min_hist.X; [fibX, fibY, focZ]];
-    min_hist.PWR    = [min_hist.PWR; pwr];
-    min_hist.scales = [min_hist.scales; nan];
+    % Increment itr counter
+    itr(2) = itr(2) + 1;
+    pk_min_hists.X(itr(1),itr(2),:)   = [fibX, fibY, focZ];
+    pk_min_hists.PWR(itr(1), itr(2))  = pwr;
+    pk_min_hists.SCLS(itr(1), itr(2)) = nan;
     return
 end
 
@@ -118,7 +120,9 @@ end
 pwr = -1*mean(pwr);
 
 %-- Save values in history struct
-min_hist.X      = [min_hist.X; [fibX, fibY, focZ]];
-min_hist.PWR    = [min_hist.PWR; pwr];
-min_hist.scales = [min_hist.scales; scales];
+% Increment itr counter
+itr(2) = itr(2) + 1;
+pk_min_hists.X(itr(1),itr(2),:)   = [fibX, fibY, focZ];
+pk_min_hists.PWR(itr(1), itr(2))  = pwr;
+pk_min_hists.SCLS(itr(1), itr(2)) = scales;
 end
