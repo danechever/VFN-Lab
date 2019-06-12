@@ -140,8 +140,8 @@ end
 
 %-- Pre-allocate data matrices
 nlam = length(lams);
-% Matrix of raster scan images
-pk_rasters = nan(nlam, lenght(distY), length(distX));
+% Matrix of raster scan images (these will already be transposed)
+pk_rasters = nan(nlam, length(distY), length(distX));
 nl_rasters = pk_rasters;
 % Struct of iteration history values
 pk_min_hists.X    = nan(nlam, nFunEvals, 3);        % State vector (peak scan)
@@ -151,10 +151,10 @@ nl_min_hists.X    = nan(nlam, nFunEvals, 4);        % State vector (null scan)
 nl_min_hists.PWR  = pk_min_hists.PWR;               % Measured power (null scan)
 nl_min_hists.SCLS = pk_min_hists.SCLS;              % Scaling factor used (null scan)
 % Minimization solutions
-pk_fval = nan(nlam);        % Peak found
+pk_fval = nan(nlam, 1);        % Peak found
 pk_X    = nan(nlam, 3);     % Ideal state vector    [X, Y, Z]
 % Minimization solutions
-nl_fval = nan(nlam);        % Null found
+nl_fval = nan(nlam, 1);        % Null found
 nl_X    = nan(nlam, 2);     % Ideal state vector    [X, Y]
 
 %% Main loop
@@ -166,7 +166,7 @@ if isvaria
 end
 %% Course raster to see donut in general
 measScl = CourseRaster_FullScan(MDT, dist);
-pk_rasters(iii,:,:) = measScl;
+pk_rasters(iii,:,:) = transpose(measScl);
 figure; imagesc(distX, distY, transpose(measScl));    % Transpose so that axes are physically oriented
 title('Initial Raster - for Peak');
 axis image; axis xy;
@@ -205,7 +205,7 @@ UB = min(UB, [150;150;7.8*nrmFac]);
 
 %%--- Perform Peak Search
 fprintf('\n-- Searching for Peak\n')
-fprintf('   Initial guess: (%f V, %f V, %f mm)\n', X0(1), X0(2), X0(3)/nrmFac);
+fprintf('   Initial guess: (%6.2f V, %6.2f V, %7.4f mm)\n', X0(1), X0(2), X0(3)/nrmFac);
 
 %-- Define iteration function
     % This moves the actuators to the new position and measures the power
@@ -238,7 +238,7 @@ figure; plot(pk_min_hists.PWR(iii,:)); title('PWR');
 VFN_Zab_move(fibZ, X(3)/nrmFac);
 %-- Do raster
 measScl = CourseRaster_FullScan(MDT, dist);
-nl_rasters(iii,:,:) = measScl;
+nl_rasters(iii,:,:) = transpose(measScl);
 
 %% Find donut in image
 %fl = fitsread('5Don_780NullNew1_20x20_SEMIREDU.fits');
@@ -287,7 +287,7 @@ UB = [RBnd;                 %Upper bounds
 
 %%--- Perform Null Search
 fprintf('\n-- Searching for Null\n')
-fprintf('   Initial guess: (R=%f V, TH=%f rad, X=%f V, Y=%f V)\n', X0(1), X0(2), X0(1)*cos(X0(2))+cent(1), X0(1)*sin(X0(2))+cent(2));
+fprintf('   Initial guess: (R=%6.2f V, TH=%6.2f rad, X=%6.2f V, Y=%6.2f V)\n', X0(1), X0(2), X0(1)*cos(X0(2))+cent(1), X0(1)*sin(X0(2))+cent(2));
 
 %-- Define iteration function
     % This moves the actuators to the new position and measures the power
@@ -318,7 +318,7 @@ figure; plot(nl_min_hists.PWR(iii,:)); title('PWR');
 ylim([0,1])
 end
 
-%% Close the connections to all devices
+%% Set final params on devices
 %-- Set Femto back to 10^6 
 FMTO_scale = 6;
 s = VFN_FMTO_setGain(s, FMTO_scale);
@@ -328,6 +328,7 @@ fprintf('\n Femto Gain set to %i\n',FMTO_scale);
 DE2_MDTVol(MDT, X(1)*cos(X(2)), 'x', 0); 
 DE2_MDTVol(MDT, X(1)*sin(X(2)), 'y', 0);
 
+%% Close connection to all devices
 fclose(MDT);
 delete(MDT);
 clear MDT;
