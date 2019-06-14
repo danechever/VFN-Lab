@@ -216,7 +216,7 @@ itr = [iii, 1];        % Iteration marker [itr(1) = nlam, itr(2) = nFunEval]
 
 %[X, fval, exitflag, ouput] = patternsearch(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
 %[X, fval, exitflag, ouput] = fmincon(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
-opts = optimset('Display', 'iter', 'TolX', 0.75, 'TolFun', 0.05, 'MaxFunEvals', nFunEvals);
+opts = optimset('Display', 'iter', 'TolX', 0.75, 'TolFun', 0.001, 'MaxFunEvals', nFunEvals);
 [X, fval, exitflag, output] = fminsearch(func, X0, opts);
 
 %%--- Print results
@@ -298,7 +298,7 @@ itr = [iii, 1];        % Iteration marker [itr(1) = nlam, itr(2) = nFunEval]
 
 %[X, fval, exitflag, output] = patternsearch(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
 %[X, fval, exitflag, output] = fmincon(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
-opts = optimset('Display', 'iter', 'TolX', sTol, 'TolFun', 0.001, 'MaxFunEvals', nFunEvals);
+opts = optimset('Display', 'iter', 'TolX', sTol, 'TolFun', 0.00001, 'MaxFunEvals', nFunEvals);
 [X, fval, exitflag, output] = fminsearch(func, X0, opts);
 
 %%--- Print results
@@ -315,7 +315,7 @@ figure; plot(nl_min_hists.X(iii,:,2)); title('fibY');
 figure; plot(nl_min_hists.X(iii,:,3)); title('fibR');
 figure; plot(nl_min_hists.X(iii,:,4)); title('fibT');
 figure; plot(nl_min_hists.PWR(iii,:)); title('PWR');
-ylim([0,1])
+%ylim([0,1])
 end
 
 %% Set final params on devices

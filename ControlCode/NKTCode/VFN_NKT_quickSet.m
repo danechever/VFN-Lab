@@ -2,14 +2,19 @@
 
 %% Parameters to set
 varPWR = 100;       % Power level
-varEMS = true;      % Emission state (true = on; false = off)
-varLAM = 633;       % Center wavelenth on varia
+varEMS = false;      % Emission state (true = on; false = off)
+varLAM = 635;       % Center wavelenth on varia
 varBWD = 3;         % Bandwidth on varia
 
 %% Push params
 fprintf('\n--- Setting parameters:\n')
 fprintf('      Power      = %f\n', varPWR);
-fprintf('      Emission   = %s\n', string(varEMS));
+if varEMS
+    strEMS = 'true';
+else
+    strEMS = 'false';
+end
+fprintf('      Emission   = %s\n', strEMS);
 fprintf('      Wavelength = %f\n', varLAM);
 fprintf('      Bandwidth  = %f\n', varBWD);
 

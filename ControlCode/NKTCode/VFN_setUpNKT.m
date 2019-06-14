@@ -5,7 +5,9 @@
 %   last modified: March 22, 2019
 %   last modified: D. Echeverri June 11, 2019
 
-if(~NKT.CONNECTED)
+%-- Check if NKT exists, has the CONNECTED field, and is not connected
+    % This takes advantage of the MATLAB logical short-circuiting 
+if ~exist('NKT', 'var') || ~isfield(NKT, 'CONNECTED') || ~NKT.CONNECTED
     
     NKT_lib_PATH = 'C:\Users\AOlab1\Desktop\DE2\VFN\VFN-Lab\ControlCode\NKTCode\';
     if count(py.sys.path, NKT_lib_PATH) == 0
@@ -18,7 +20,7 @@ if(~NKT.CONNECTED)
     disp('*** Connecting to NKT ... ***');
     
     % Create Nkt object using nkt_mod.py
-    NKT.nktobj = py.nkt_mod_falco.Nkt('/dev/ttyNKT',115200);%115200%
+    NKT.nktobj = py.nkt_mod_falco.Nkt('COM6',115200);%115200%
     
     NKT.CONNECTED = true;
     

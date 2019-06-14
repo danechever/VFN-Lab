@@ -73,7 +73,7 @@ function rVol = DE2_MDTVol(MDT, Vol, Cha, RW)
             wri = [Cha 'voltage=' num2str(Volw, '%-.2f')];
             fprintf(MDT, wri);              %Send message on serial port
             wri = [Cha 'voltage?'];         %Create read command
-            pause(.1);                      %Wait for voltage to settle
+            pause(.075);                      %Wait for voltage to settle
             fprintf(MDT, wri);              %Send read command
             rVol = fscanf(MDT, '%s');       %Read result
             rVol = str2double(rVol(4:end-1));%Convert to number
