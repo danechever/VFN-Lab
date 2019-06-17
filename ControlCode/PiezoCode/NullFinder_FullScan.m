@@ -325,8 +325,8 @@ s = VFN_FMTO_setGain(s, FMTO_scale);
 fprintf('\n Femto Gain set to %i\n',FMTO_scale);
 
 %-- Set X and Y axes to last optimal position
-DE2_MDTVol(MDT, X(1)*cos(X(2)), 'x', 0); 
-DE2_MDTVol(MDT, X(1)*sin(X(2)), 'y', 0);
+DE2_MDTVol(MDT, nl_X(end,1), 'x', 0); 
+DE2_MDTVol(MDT, nl_X(end,2), 'y', 0);
 
 %% Close connection to all devices
 fclose(MDT);
