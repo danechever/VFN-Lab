@@ -57,6 +57,33 @@ Samp    = 500;
 %Exposure time for camera
 CExp    = .5;
 
+%% Zaber Setup
+if isVortScan && ~isZab
+    error('isVortScan is true but vortex motion is disabled with isZab')
+end
+
+if isZab
+    VFN_setUpZabers; % Instantiate the zabers
+
+    % Relabel the variables for clarity
+    if exist('ax14', 'var')
+        vortX = ax14;
+        clear ax14
+    end
+    if exist('ax63', 'var')
+        vortY = ax63;
+        clear ax63
+    end
+    if exist('ax93', 'var')
+        pmX = ax93;
+        clear ax93
+    end
+    
+    % Move red PM out of beam
+    VFN_Zab_move(pmX, 25);
+    
+end
+
 %% MDT (piezo) Setup
 %Create serial port and define communication properties
     %COM# changes between computers; must check in Device Manager
@@ -64,40 +91,79 @@ MDT     = serial('COM4', 'BaudRate', 115200, 'InputBufferSize', 1500, ...
     'Terminator', {'CR' 'LF/CR'});
 fopen(MDT);           %Connect port to device
 
-%% Power meter setup
-% this code is copied from Yinzi's code
+%% Femto setup
+% Define the gain to apply for scaling. Uses same gain for all: gnFact^(FMTO_scale-6)
+gnFact  = 9.97;
 
-%Setup Femto power meter
+% Setup Femto 
+VFN_setUpFMTO;  
 
-s = daq.createSession('ni');
-addAnalogInputChannel(s,'Dev1', 0, 'Voltage');
+%if isAutoScale
+%    % Take a sample reading at current power
+%    readVal = mean(startForeground(s));
+%    % Modify gain accordingly
+%    [FMTO_scale, s] = VFN_FMTO_setAutoGain(s, readVal, FMTO_scale);
+%else
+    s = VFN_FMTO_setGain(s, FMTO_scale);
+%end
 
-s.Rate = 10; % rate is the rate of acquisition per second
-s.DurationInSeconds = 0.1; 
+fprintf('Current Gain setting: %i\n', FMTO_scale)
 
-%starting conversion scale (in V/W)
-pm_scale = 10^5; % put here the current scale used to read the power
+%% Red Thorlabs PM setup
 
+%-- Connect to red PM only if it will be used
+if isPMNorm
+    % Find a VISA-USB object.
+        % NOTE: check the SN on the device. The 2 student-lab PM100D's are:
+        %   P0015519    and     P0015560
+    obj1 = instrfind('Type', 'visa-usb', 'RsrcName', 'USB0::0x1313::0x8078::P0015519::0::INSTR', 'Tag', '');
+
+    % Create the VISA-USB object if it does not exist
+    % otherwise use the object that was found.
+    if isempty(obj1)
+        % NOTE: check the SN on the device. The 2 student-lab PM100D's are:
+            %   P0015519    and     P0015560
+        obj1 = visa('NI', 'USB0::0x1313::0x8078::P0015519::0::INSTR');
+    else
+        fclose(obj1);
+        obj1 = obj1(1);
+    end
+
+    % Connect to instrument object, obj1.
+    fopen(obj1);
+end
 
 %% Define Initial Parameters
 Nactacross = 10;    %Number actuators across any given length
                         %VALUE IS AN ESTIMATE; NEED TO CONFIRM
 
-%SET Initial DM SIN PROPERTIES HERE: 
-h0  = 85;           %Vary amplitude: 10 to 100, step of 10
-q   = 5.3625;         %Fix Angle: Set to meet given speckle
-x   = 6.675;         %Fix Distance: Set to meet given speckle
-alp = .1084;         %Vary Phase: 0 to 2pi, step of pi/10
+% Set initial params: 
+fibX = 75;          % Fiber X position
+fibY = 75;          % Fiber Y position
+fibZ = 75;          % Fiber Z position
+vorX = 12.215000;   % Vortex X posiiton
+vorY = 13.075000;   % Vortex Y position
 
-%SET NUMBER OF ITERATIONS TO PERFORM HERE:
+% Vectorize initial params
+par0 = [fibX, fibY, fibZ, vorX, vorY];
+
+% SET NUMBER OF ITERATIONS TO PERFORM HERE:
 itr = 3e3;
 
-%Save initial condition as vector for optimization
-par0 = [h0, q, x, alp];
-
-%SET PROPERTIES FOR SEARCH
-LB = [75, 5, 6.1, -.2];              %Lower bounds; same elements as par0
-UB = [95, 5.7, 7.7, .4];       %Upper bounds; same elements as par0
+% Set optimization properties
+fibBnd = 25;                                %Max distance from fibX/Y
+focBnd = 50;                                %Max distance from fibZ
+vorBnd = 0.25;                              %Max distance from focus
+LB = [fibX-fibBnd,                          %Lower bounds
+      fibY-fibBnd, 
+      fibZ-focBnd, 
+      vorX-vorBnd,
+      vorY-vorBnd];
+UB = [fibX+fibBnd,                          %Upper bounds
+      fibY+fibBnd,
+      fibZ+focBnd,
+      vorX+vorBnd,
+      vorY+vorBnd];
 sTol = .0000001;                     %Smallest step size
 fTol = 3e-9;                   %Stops iterating when delPower < fTol
 
