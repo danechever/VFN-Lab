@@ -1,4 +1,4 @@
-function pwr = MinFuncNullPolar_VortScan(X, MDT, zabs, cent, nrmFac, RBnd, zabBnd)
+function pwr = MinFuncNullPolarNoFoc_VortScan(X, MDT, zabs, cent, nrmFac, RBnd, zabBnd)
 % This searches for the null in fiber X,Y,Z and Vortex X,Y
 % It uses polar coordinates in the fiber so that bounds can be circular
 
@@ -6,15 +6,13 @@ global s itr nl_min_hists FMTO_scale
 
 %% Prep motion
 %-- Extract desired positions from vector
-X = X./[1, 1, nrmFac, nrmFac, nrmFac];    % Rescale with nrmFac
+X = X./[1, 1, nrmFac, nrmFac];    % Rescale with nrmFac
 fibR = X(1);                % Fiber R position
 fibT = X(2);                % Fiber Theta position
-focZ = X(3);         % Fiber Z position
-vorX = X(4);         % Vortex X position
-vorY = X(5);         % Vortex Y position
+vorX = X(3);         % Vortex X position
+vorY = X(4);         % Vortex Y position
 
 %-- Extract zaber objects from zabs vector
-fibZ  = zabs.fibZ;
 vortX = zabs.vortX;
 vortY = zabs.vortY;
 
@@ -44,19 +42,13 @@ if ~(0<=fibY && fibY<=150)
     flg = true;
     %error('Desired fibY position (%f) is beyond allowable range', fibY)
 end
-if ~(zabBnd(1,1)<=focZ && focZ<=zabBnd(1,2))
-    % Z-Zaber position is beyond range
-    pwr = 1000; 
-    flg = true;
-    %error('Desired focZ position (%f) is beyond allowable range', focZ)
-end
-if ~(zabBnd(2,1)<=vorX && vorX<=zabBnd(2,2))      % range semi-arbitrarily chosen
+if ~(zabBnd(1,1)<=vorX && vorX<=zabBnd(1,2))      % range semi-arbitrarily chosen
     % Z-Zaber position is beyond range
     pwr = 1000; 
     flg = true;
     %error('Desired vorX position (%f) is beyond allowable range', vorX)
 end
-if ~(zabBnd(3,1)<=vorY && vorY<=zabBnd(3,2))      % range semi-arbitrarily chosen
+if ~(zabBnd(2,1)<=vorY && vorY<=zabBnd(2,2))      % range semi-arbitrarily chosen
     % Z-Zaber position is beyond range
     pwr = 1000; 
     flg = true;
@@ -67,7 +59,7 @@ if flg
     %-- Save values in history struct
     % Increment itr counter
     itr = itr + 1;
-    nl_min_hists.X(itr,:)   = [fibX, fibY, focZ, vorX, vorY];
+    nl_min_hists.X(itr,:)   = [fibX, fibY, vorX, vorY];
     nl_min_hists.PWR(itr)  = pwr;
     nl_min_hists.SCLS(itr) = nan;
     return
@@ -85,11 +77,9 @@ DE2_MDTVol(MDT, fibY, 'y', 0);
 
 %-- Move the Zabers
 % Remove backlash
-VFN_Zab_move(fibZ, focZ-0.05);
 VFN_Zab_move(vortX, vorX-0.05);
 VFN_Zab_move(vortY, vorY-0.05);
 % Now move
-VFN_Zab_move(fibZ, focZ);
 VFN_Zab_move(vortX, vorX);
 VFN_Zab_move(vortY, vorY);
 
@@ -159,7 +149,7 @@ pwr = mean(pwr);
 %-- Save values in history struct
 % Increment itr counter
 itr = itr + 1;
-nl_min_hists.X(itr,:)   = [fibX, fibY, focZ, vorX, vorY];
+nl_min_hists.X(itr,:)   = [fibX, fibY, vorX, vorY];
 nl_min_hists.PWR(itr)  = pwr;
 nl_min_hists.SCLS(itr) = scales;
 end

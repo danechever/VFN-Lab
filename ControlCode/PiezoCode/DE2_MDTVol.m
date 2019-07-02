@@ -66,7 +66,7 @@ function rVol = DE2_MDTVol(MDT, Vol, Cha, RW)
             if abs(dV) > 10
                 Volw = rVol + 10*dV/abs(dV);%dV/abs(dV) defines direction
             else
-                Volw = rVol + dV;
+                Volw = Vol;%rVol + dV;
             end
             
             %Create write command; correct channel and voltage with formatting

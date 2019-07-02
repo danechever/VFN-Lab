@@ -10,18 +10,20 @@ addpath(genpath('C:\Users\AOlab1\Desktop\DE2\VFN\VFN-Lab\ControlCode'));
 close all
 clear all
 
-global s itr nl_min_hists FMTO_scale RBnd 
+global s itr nl_min_hists FMTO_scale 
 
 %% Scan parameters
 %-- Initial conditions for minimization
-fibX0 = 75;             % Fiber X position [V]
-fibY0 = 75;             % Fiber Y position [V]
-focZ0 = 3.7200;         % Fiber Z position [mm]
-vorX0 = 12.1450;        % Vortex X position [mm]
-vorY0 = 12.4450;        % Vortex Y position [mm]
+fibX0 = 77.13;             % Fiber X position [V]
+fibY0 = 86.79;             % Fiber Y position [V]
+focZ0 = 3.702606;         % Fiber Z position [mm]
+vorX0 = 12.270;        % Vortex X position [mm]
+vorY0 = 13.080;        % Vortex Y position [mm]
 
-%-- Bound for fiber position in minimization
-RBnd  = 10;             % Max fiber distance from center of scan [V]
+%-- Bounds for scan
+RBnd  = 20;             % Max fiber distance from center of scan [V]
+focBnd = 0.001;          % +/- bounds for fiber focus [mm]
+vorBnd = 0.1;          % +/- bounds for vortex position [mm]
 
 %-- Bound for raster scan (how far to scan from null found)
 rstBnd = 40;            % Max distance from null to scan in raster [V]
@@ -89,7 +91,7 @@ beq = [];
 nonlcon = [];
 
 %-- Set tolerance and step size values
-sTol = .2;                     %Smallest step size
+sTol = .02;                     %Smallest step size
 
 %-- Maximum number of function evals in minimizer
 nFunEvals = 250;
@@ -126,13 +128,29 @@ nFunEvals = 250;
 %% Minimize to Find null 
 %-- Pre-allocate data matrices
 % Matrix of raster scan images (these will already be transposed)
-nl_rasters = nan(length(distY), length(distX));
+nl_rasters = nan(rstPts, rstPts);
 % Struct of iteration history values
-nl_min_hists.X    = nan(nFunEvals, 5);        % State vector 
+nl_min_hists.X    = nan(nFunEvals, 4);        % State vector 
 nl_min_hists.PWR  = nan(nFunEvals,1);           % Measured power 
 nl_min_hists.SCLS = nan(nFunEvals,1);           % Scaling factor used 
 
 %%--- Define Search Parameters for finding null
+%-- Set Bounds and Constraints
+%RBnd = 10;                  %Max distance from cent [in V]
+    % RBnd is defined at top 
+%- Zaber bounds:
+zabBnd = nan(2,2); 
+% Bounds relative to initial condition
+%zabBnd(1,:) = [focZ0-focBnd, focZ0+focBnd];
+zabBnd(1,:) = [vorX0-vorBnd, vorX0+vorBnd];
+zabBnd(2,:) = [vorY0-vorBnd, vorY0+vorBnd];
+% Hard physical bounds (to avoid collisions or large motions
+ zabLIM = [ 10       , 17;
+            12.334   , 17];
+% Take more important of the relative or hard bounds
+zabBnd(:,1) = max(zabBnd(:,1),zabLIM(:,1));
+zabBnd(:,2) = min(zabBnd(:,2),zabLIM(:,2));
+
 %-- Set initial params (in real axis positions): 
 %fibX0 = 75; fibY0 = 75;             % Fiber Center position in X and Y [V]
      % above values are defined at top
@@ -141,46 +159,57 @@ focZ0 = focZ0*nrmFac;               % Fiber focus position [10s of microns]
 vorX0 = vorX0*nrmFac;               % Vortex initial X position [10s of microns]
 vorY0 = vorY0*nrmFac;               % Vortex initial Y position [10s of microns]
 %-- Set starting conditions to center here
-fibR0 = 0;                          % Fiber R position [in V]
-fibT0 = 0;                          % Fiber Theta position [in rad]
+    % use *close* to center so that minimizer takes larger steps
+    % when =0, minimizer takes 1e-6 sized steps...
+fibR0 = 0.1;                          % Fiber R position [in V]
+fibT0 = 0.1;                          % Fiber Theta position [in rad]
 
 %-- Vectorize initial params
-X0 = [fibR0, fibT0, focZ0, vorX0, vorY0];
-
-%-- Set Bounds and Constraints
-%RBnd = 10;                  %Max distance from cent [in V]
-    % RBnd is defined at top 
+%X0 = [fibR0, fibT0, focZ0, vorX0, vorY0];
+X0 = [fibR0, fibT0, vorX0, vorY0];
 
 %%--- Perform Null Search
 fprintf('\n-- Searching for Null\n')
-fprintf('   Initial guess: (\n\t\tfibX=%5.2f V, fibY=%5.2f V, \n\t\tfibZ =%7.4f mm, \n\t\tvortX=%7.4f mm, vortY=%7.4f mm)\n', fibX0, fibY0, X0(3)/nrmFac, X0(4)/nrmFac, X0(5)/nrmFac);
+%fprintf('   Initial guess: (\n\t\tfibX=%5.2f V, fibY=%5.2f V, \n\t\tfibZ =%7.4f mm, \n\t\tvortX=%7.4f mm, vortY=%7.4f mm)\n', fibX0, fibY0, X0(3)/nrmFac, X0(4)/nrmFac, X0(5)/nrmFac);
+fprintf('   Initial guess: (\n\t\tfibX=%5.2f V, fibY=%5.2f V, \n\t\tvortX=%7.4f mm, vortY=%7.4f mm)\n', fibX0, fibY0, X0(3)/nrmFac, X0(4)/nrmFac);
 
 %-- Define iteration function
     % This moves the actuators to the new position and measures the power
-func = @(X) MinFuncNullPolar_VortScan(X, MDT, zabs, cent, nrmFac);
+%func = @(X) MinFuncNullPolar_VortScan(X, MDT, zabs, cent, nrmFac, RBnd, zabBnd);
+func = @(X) MinFuncNullPolarNoFoc_VortScan(X, MDT, zabs, cent, nrmFac, RBnd, zabBnd);
 
 %-- Set iteration counter for minimizer
 itr = 1; 
 
+%-- Move to requested focus before starting scan
+if focZ0/nrmFac <= 7.8
+    VFN_Zab_move(fibZ, focZ0/nrmFac);
+else
+    error('Desired focus is out of range')
+end
+
 %[X, fval, exitflag, output] = patternsearch(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
-%[X, fval, exitflag, output] = fmincon(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
-opts = optimset('Display', 'iter', 'TolX', sTol, 'TolFun', 0.001, 'MaxFunEvals', nFunEvals);
+%opts = optimoptions('fmincon', 'Algorithm', 'active-set', 'Display', 'iter', 'StepTolerance', sTol, 'FunctionTolerance', 0.000001, 'MaxFunctionEvaluations', nFunEvals);
+%[X, fval, exitflag, output] = fmincon(func, X0, A, b, Aeq, beq, [], [], nonlcon, opts);
+opts = optimset('Display', 'iter', 'TolX', sTol, 'TolFun', 0.000001, 'MaxFunEvals', nFunEvals);
 [X, fval, exitflag, output] = fminsearch(func, X0, opts);
 
 %-- Rescale X by nrmFac
-X = X./[1, 1, nrmFc, nrmFac, nrmFac];
+%X = X./[1, 1, nrmFac, nrmFac, nrmFac];
+X = X./[1, 1, nrmFac, nrmFac];
 nlX = X(1)*cos(X(2))+cent(1); nlY = X(1)*sin(X(2))+cent(2);
 %%--- Print results
 fprintf('\n      - Null found =  %f', fval);
-fprintf('\n      - Ideal pos  =  (fibX=%5.2f,, fibY=%5.2f, fibZ=%7.4f, vorX=%7.4f, vorY=%7.4f)\n', nlX, nlY, X(3),X(4),X(5));
+%fprintf('\n      - Ideal pos  =  (fibX=%5.2f, fibY=%5.2f, fibZ=%7.4f, vorX=%7.4f, vorY=%7.4f)\n', nlX, nlY, X(3),X(4),X(5));
+fprintf('\n      - Ideal pos  =  (fibX=%5.2f, fibY=%5.2f, fibZ=%7.4f, vorX=%7.4f, vorY=%7.4f)\n', nlX, nlY, focZ0/nrmFac, X(3), X(4));
 
 figure; plot(nl_min_hists.X(:,1)); title('fibX');
 figure; plot(nl_min_hists.X(:,2)); title('fibY');
-figure; plot(nl_min_hists.X(:,3)); title('fibZ');
-figure; plot(nl_min_hists.X(:,4)); title('vorX');
-figure; plot(nl_min_hists.X(:,5)); title('vorY');
+figure; plot(nl_min_hists.X(:,3)); title('vorX');
+figure; plot(nl_min_hists.X(:,4)); title('vorY');
+%figure; plot(nl_min_hists.X(:,5)); title('vorY');
 figure; plot(nl_min_hists.PWR); title('PWR');
-%ylim([0,1])
+ylim([0,.1])
 
 %% Raster  to see resulting donut
 %--- Define raster scan properties
@@ -190,13 +219,13 @@ dist   = [distX' distY'];
 
 %-- Move to ideal focus and vortex positions
 % Remove backlash
-VFN_Zab_move(fibZ, X(3)-0.05);
-VFN_Zab_move(vortX, X(4)-0.05);
-VFN_Zab_move(vortY, X(5)-0.05);
+%VFN_Zab_move(fibZ, X(3)-0.05);
+VFN_Zab_move(vortX, X(3)-0.05);
+VFN_Zab_move(vortY, X(4)-0.05);
 % Now move
-VFN_Zab_move(fibZ, X(3));
-VFN_Zab_move(vortX, X(4));
-VFN_Zab_move(vortY, X(5));
+%VFN_Zab_move(fibZ, X(3));
+VFN_Zab_move(vortX, X(3));
+VFN_Zab_move(vortY, X(4));
 
 %--- Do raster
 measScl = CourseRaster_FullScan(MDT, dist);

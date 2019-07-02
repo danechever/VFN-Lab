@@ -212,11 +212,11 @@ fprintf('   Initial guess: (%6.2f V, %6.2f V, %7.4f mm)\n', X0(1), X0(2), X0(3)/
 func = @(X) MinFuncPeak_FullScan(X, fibZ, MDT, nrmFac);
 
 %-- Set iteration counter for minimizer correctly
-itr = [iii, 1];        % Iteration marker [itr(1) = nlam, itr(2) = nFunEval]
+itr = [iii, 0];        % Iteration marker [itr(1) = nlam, itr(2) = nFunEval]
 
 %[X, fval, exitflag, ouput] = patternsearch(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
 %[X, fval, exitflag, ouput] = fmincon(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
-opts = optimset('Display', 'iter', 'TolX', 0.75, 'TolFun', 0.001, 'MaxFunEvals', nFunEvals);
+opts = optimset('Display', 'iter', 'TolX', 0.075, 'TolFun', 0.00001, 'MaxFunEvals', nFunEvals);
 [X, fval, exitflag, output] = fminsearch(func, X0, opts);
 
 %%--- Print results
@@ -248,7 +248,7 @@ nl_rasters(iii,:,:) = transpose(measScl);
 %flThs(fl>pkVal/3) = fl(fl>pkVal/3);
 %[cent, radi] = imfindcircles(flThs,[4,15], 'Sensitivity',0.95)
 %-- Search for circles in the scan
-[cent, radi] = imfindcircles(transpose(measScl),[3,13], 'Sensitivity',0.97);
+[cent, radi] = imfindcircles(transpose(measScl),[3,13], 'Sensitivity',0.92);
 %-- Translate center coords from pixels to voltages
 cent = [distX(round(cent(1))) distY(round(cent(2)))];
 %-- Convert to polar for circular bounds
@@ -271,6 +271,9 @@ title('Focused Raster - for Null');
 %%--- Define Search Parameters for finding null
 %-- Set initial params (based on polar coords): 
 fibR0 = sqrt(nlX^2 + nlY^2);             % Fiber R position [in V]
+if fibR0 == 0
+    fibR0 = 0.00001;
+end
 fibT0 = acos(nlX/fibR0);             % Fiber Theta position [in rad]
 
 %-- Vectorize initial params
@@ -294,11 +297,11 @@ fprintf('   Initial guess: (R=%6.2f V, TH=%6.2f rad, X=%6.2f V, Y=%6.2f V)\n', X
 func = @(X) MinFuncNullPolar_FullScan(X, MDT, cent);
 
 %-- (re)Set iteration counter for minimizer correctly
-itr = [iii, 1];        % Iteration marker [itr(1) = nlam, itr(2) = nFunEval]
+itr = [iii, 0];        % Iteration marker [itr(1) = nlam, itr(2) = nFunEval]
 
 %[X, fval, exitflag, output] = patternsearch(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
 %[X, fval, exitflag, output] = fmincon(func, X0, A, b, Aeq, beq, LB, UB, nonlcon, opts);
-opts = optimset('Display', 'iter', 'TolX', sTol, 'TolFun', 0.00001, 'MaxFunEvals', nFunEvals);
+opts = optimset('Display', 'iter', 'TolX', sTol, 'TolFun', 0.000001, 'MaxFunEvals', nFunEvals);
 [X, fval, exitflag, output] = fminsearch(func, X0, opts);
 
 %%--- Print results
