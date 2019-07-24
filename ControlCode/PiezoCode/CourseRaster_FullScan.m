@@ -1,4 +1,4 @@
-function measScl = CourseRaster_FullScan(MDT, dist)
+function [measScl, varargout] = CourseRaster_FullScan(MDT, dist)
 % NOTE: backlash is always removed from zaber motion. Even when moving forward.
 % This only searches for the peak coupling and will use X,Y, and Foc
 % 'dist' is a matrix whos 1st column is distX and 2nd column is distY
@@ -84,4 +84,7 @@ end
 % Re-scale data to account for gain settings
 measScl = mean(measScl,3).*scales(:,:,2);
 
+varargout = cell(1,2);
+varargout{1} = meas;
+varargout{2} = scales;
 end
