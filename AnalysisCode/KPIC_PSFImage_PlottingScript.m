@@ -5,24 +5,25 @@ close all; clear all;
 
 %-- Directories
 % Raw data directory (where raw data is located for import)** End with filesep**
-rwfld = 'C:\Users\danie\OneDrive - California Institute of Technology\Mawet201718\VortexFiberNuller_VFN\PupilVFN\PSFImaging\KBand_Vortex_Apod_072319\';
+rwfld = 'C:\Users\danie\OneDrive - California Institute of Technology\Mawet201718\VortexFiberNuller_VFN\PupilVFN\PSFImaging\KBand_Vortex_Apod_Good_072519\';
 % Output data directory (where processed data will be saved)
 svfld = [rwfld 'Processed\'];
 
 %-- Control Flags
 isSaveFigs = true;  % Flag to save figures
 isPlotFull = false; % Flag to display full (un-cropped) frames
+isPlotLogs = true;  % Flag to display the log of the cropped images
 
 %-- Outlier tolerance (for removing frames with flux changes)
 tol = 5;
 
 %-- Crop Parameters
 vort1_crp   = 60;           % Crop window (+/- this value)
-vort1_cnt = [174 241];      % Crop center for IN frame. [row col]
+vort1_cnt = [171 242];      % Crop center for IN frame. [row col]
 vort2_crp   = vort1_crp;    % Crop window (+/- this value)
-vort2_cnt = [170 234];      % Crop center for IN frame. [row col]
+vort2_cnt = [81 232];      % Crop center for IN frame. [row col]
 vort3_crp   = 51;    % Crop window (+/- this value)
-vort3_cnt = [192 243];      % Crop center for IN frame. [row col]
+vort3_cnt = [86 224];      % Crop center for IN frame. [row col]
 % _Out is automatically centered at peak
 
 %-- Choose colormap for saved images
@@ -39,15 +40,15 @@ fitsread to load the images.
 fprintf('\n______VORT 1 DS081111-B  (12.5 x 12.5 mm)______\n')
 
 %-- Load the IN file
-flnm = [rwfld 'KPIC_Vort1_VortIN_PSF.fits'];
+flnm = [rwfld 'KPIC_Vort1_VortIN_PSF2.fits'];
 vort1In = fitsread(flnm, 'image');
 
 %-- Load the Out file
-flnm = [rwfld 'KPIC_Vort1_VortOut_PSF.fits'];
+flnm = [rwfld 'KPIC_Vort1_VortOut_PSF2.fits'];
 vort1Out = fitsread(flnm, 'image');
 
 %-- Load the Background file
-flnm = [rwfld 'KPIC_Vort1_Background_PSF.fits'];
+flnm = [rwfld 'KPIC_Vort1_Background_PSF2.fits'];
 vort1Bck = fitsread(flnm, 'image');
 
 %-- Remove outliers (where flux changed significantly)
@@ -152,19 +153,46 @@ if isSaveFigs
     export_fig([svfld 'Vort1Bck_Crp.png'],'-r300', '-painters');
 end
 
+if isPlotLogs
+    % In data
+    figure('color','white','units', 'inches', 'Position', [0 0 6 6]);
+    vort1In_crpLog = vort1In_crp;
+    vort1In_crpLog(vort1In_crpLog<=0) = min(vort1In_crp(vort1In_crp>0));
+    imagesc(log10(vort1In_crpLog));
+    axis image
+    colormap(cmap)
+    colorbar;
+    title('Vortex 1 (DS081111-B) LOG10(IN) - Cropped')
+    if isSaveFigs
+        export_fig([svfld 'Vort1In_Crp_BckSub_Log.png'],'-r300', '-painters');
+    end
+    % Out data
+    figure('color','white','units', 'inches', 'Position', [0 0 6 6]);
+    vort1Out_crpLog = vort1Out_crp;
+    vort1Out_crpLog(vort1Out_crpLog<=0) = min(vort1Out_crp(vort1Out_crp>0));
+    imagesc(log10(vort1Out_crpLog));
+    axis image
+    colormap(cmap)
+    colorbar;
+    title('Vortex 1 (DS081111-B) LOG10(Out) - Cropped')
+    if isSaveFigs
+        export_fig([svfld 'Vort1Out_Crp_BckSub_Log.png'],'-r300', '-painters');
+    end
+end
+
 %% Vortex 2: DS110414-10  (12.5 x 12.5 mm)
 fprintf('\n______VORT 2 DS110414-10  (12.5 x 12.5 mm)______\n')
 
 %-- Load the IN file
-flnm = [rwfld 'KPIC_Vort2_VortIN_PSF.fits'];
+flnm = [rwfld 'KPIC_Vort2_VortIN_PSF2.fits'];
 vort2In = fitsread(flnm, 'image');
 
 %-- Load the Out file
-flnm = [rwfld 'KPIC_Vort2_VortOut_PSF.fits'];
+flnm = [rwfld 'KPIC_Vort2_VortOut_PSF2.fits'];
 vort2Out = fitsread(flnm, 'image');
 
 %-- Load the Background file
-flnm = [rwfld 'KPIC_Vort2_Background_PSF.fits'];
+flnm = [rwfld 'KPIC_Vort2_Background_PSF2.fits'];
 vort2Bck = fitsread(flnm, 'image');
 
 %-- Remove outliers (where flux changed significantly)
@@ -269,19 +297,46 @@ if isSaveFigs
     export_fig([svfld 'Vort2Bck_Crp.png'],'-r300', '-painters');
 end
 
+if isPlotLogs
+    % In data
+    figure('color','white','units', 'inches', 'Position', [0 0 6 6]);
+    vort2In_crpLog = vort2In_crp;
+    vort2In_crpLog(vort2In_crpLog<=0) = min(vort2In_crp(vort2In_crp>0));
+    imagesc(log10(vort2In_crpLog));
+    axis image
+    colormap(cmap)
+    colorbar;
+    title('Vortex 2 (DS110414-10) LOG10(IN) - Cropped')
+    if isSaveFigs
+        export_fig([svfld 'Vort2In_Crp_BckSub_Log.png'],'-r300', '-painters');
+    end
+    % Out data
+    figure('color','white','units', 'inches', 'Position', [0 0 6 6]);
+    vort2Out_crpLog = vort2Out_crp;
+    vort2Out_crpLog(vort2Out_crpLog<=0) = min(vort2Out_crp(vort2Out_crp>0));
+    imagesc(log10(vort2Out_crpLog));
+    axis image
+    colormap(cmap)
+    colorbar;
+    title('Vortex 2 (DS110414-10) LOG10(Out) - Cropped')
+    if isSaveFigs
+        export_fig([svfld 'Vort2Out_Crp_BckSub_Log.png'],'-r300', '-painters');
+    end
+end
+
 %% Vortex 3: DS110419-20  (12.5 x 12.5 mm)
 fprintf('\n______VORT 3 DS110419-20  (45 x 45 mm)______\n')
 
 %-- Load the IN file
-flnm = [rwfld 'KPIC_Vort3_VortIN_PSF.fits'];
+flnm = [rwfld 'KPIC_Vort3_VortIN_PSF2.fits'];
 vort3In = fitsread(flnm, 'image');
 
 %-- Load the Out file
-flnm = [rwfld 'KPIC_Vort3_VortOut_PSF.fits'];
+flnm = [rwfld 'KPIC_Vort3_VortOut_PSF2.fits'];
 vort3Out = fitsread(flnm, 'image');
 
 %-- Load the Background file
-flnm = [rwfld 'KPIC_Vort3_Background_PSF.fits'];
+flnm = [rwfld 'KPIC_Vort3_Background_PSF2.fits'];
 vort3Bck = fitsread(flnm, 'image');
 
 %-- Remove outliers (where flux changed significantly)
@@ -384,4 +439,31 @@ colorbar;
 title('Vortex 3 (DS110419-20) LOG10(Background) - Cropped')
 if isSaveFigs
     export_fig([svfld 'Vort3Bck_Crp.png'],'-r300', '-painters');
+end
+
+if isPlotLogs
+    % In data
+    figure('color','white','units', 'inches', 'Position', [0 0 6 6]);
+    vort3In_crpLog = vort3In_crp;
+    vort3In_crpLog(vort3In_crpLog<=0) = min(vort3In_crp(vort3In_crp>0));
+    imagesc(log10(vort3In_crpLog));
+    axis image
+    colormap(cmap)
+    colorbar;
+    title('Vortex 3 (DS110419-20) LOG10(IN) - Cropped')
+    if isSaveFigs
+        export_fig([svfld 'Vort3In_Crp_BckSub_Log.png'],'-r300', '-painters');
+    end
+    % Out data
+    figure('color','white','units', 'inches', 'Position', [0 0 6 6]);
+    vort3Out_crpLog = vort3Out_crp;
+    vort3Out_crpLog(vort3Out_crpLog<=0) = min(vort3Out_crp(vort3Out_crp>0));
+    imagesc(log10(vort3Out_crpLog));
+    axis image
+    colormap(cmap)
+    colorbar;
+    title('Vortex 3 (DS110419-20) LOG10(Out) - Cropped')
+    if isSaveFigs
+        export_fig([svfld 'Vort3Out_Crp_BckSub_Log.png'],'-r300', '-painters');
+    end
 end
