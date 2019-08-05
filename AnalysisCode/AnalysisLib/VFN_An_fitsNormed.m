@@ -96,14 +96,19 @@ function nrmDat = VFN_An_fitsNormed(nm2find, frame, an_params)
     
     
     if scantype == 'WavelengthScan'
+        % Check if manual normalization input is empty
         if isempty(an_params.NormVals)
             nrmvals = nan(length(an_params.Wvls), length(an_params.BWs));
+            % Load raw normalization values
             for j = 1:length(an_params.Wvls)
                 for i = 1:length(an_params.BWs)
                     nrmvals (j,i) = VFN_An_getKwd(kwds, ['RAWNRM' sprintf('%02d', (j-1)*length(an_params.BWs)+i)]);
                 end
             end
+            % Check if the raw normalization values in the fits file exists
             if isempty(nrmvals(1,1))
+                % Getting normalization values with conversion from red pm
+                % to femto already
                 for j = 1:length(an_params.Wvls)
                     for i = 1:length(an_params.BWs)
                         nrmvals (j,i) = VFN_An_getKwd(kwds, ['NRMVAL' sprintf('%02d', (j-1)*length(an_params.BWs)+i)]);
@@ -111,6 +116,7 @@ function nrmDat = VFN_An_fitsNormed(nm2find, frame, an_params)
                 end
                 nrmVl = nrmvals(frame(1),frame(2));
             else
+                % applies conversion from red pm to femto to raw values
                 nrmVl = nrmvals(frame(1),frame(2))/VFN_getFmtoResponsivity(an_params.Wvls(frame(1)));
             end
         else

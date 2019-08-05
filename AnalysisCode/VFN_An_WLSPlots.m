@@ -1,5 +1,17 @@
-% Plotting Script for analyzing the data for the monochromatic OSA paper
-% NOTE: this script isn't capable of handling multiple wavelength centers
+% Plotting Script for analyzing the data from wavelength scans
+
+% This script is used to find and plot the null and coupling for each of
+% bandwidths scanned as well as the contour plots if needed
+% All plots have options to fit a line, use radial averaging, fix the fiber
+% location, and plot in log scale.
+
+% If manually providing normalization values, make sure they already
+% account for the conversion factor between the red pm and the femto
+% If not manually providing normalization values, make sure to leave
+% an_params.NormVals empty and that the normalization values are stored in
+% the fits file.
+
+% NOTE: this script isn't capable of handling multiple bandwidths
 close all
 clear all
 
@@ -17,7 +29,11 @@ fontsize2 = 18;
 % add path to analysis library
 %addpath('C:\Users\AOlab1\Desktop\DE2\VFN\VFN-Lab\AnalysisCode\AnalysisLib')
 addpath('C:\Users\Thomas\Desktop\VFN-Lab-master\VFN-Lab-master\AnalysisCode\AnalysisLib')
+
+% add path to export_fig function to save figures
 addpath('D:\Programs\Matlab\altmany-export_fig-b1a7288')
+
+% add path to simulations library for a polar transform function
 addpath('C:\Users\Thomas\Desktop\VFN-Simulations-master\VFN-Simulations-master\VFNlib')
 
 
@@ -37,6 +53,7 @@ an_params.gnFactor = 9.97;
 an_params.lensTHPT = 0.9973;
 
 % Conversion factor between red thorlabs PM in uW to femto volts at 10^6
+% NOTE: not used anymore, but still included to not throw errors
 an_params.uw2fmto = .9;%0.6318;        %P_femto[v]/P_red[uW]
 an_params.rdOfmto = 1/an_params.uw2fmto;   % Ratio as defined by nem (red[uW]/fmto[V]
 
@@ -74,7 +91,8 @@ isLinFit = false;
 isRadAvg = true;
 
 % Flag for using a fixed fiber position (fixed null and radAvg position)
-% for all bandwidths
+% for all bandwidths - uses the position of the best null when averaging
+% between all scans, only used when isRadAvg is true
 isFixed = true;
     
 % Flag to print locations
@@ -90,6 +108,7 @@ if ~isPrintLoc
     warning('Location printing is disabled with "isPrintLoc"')
 end
 
+% Loading the wavelengths and bandwidths scanned
 [BWs,Wvls] = VFN_An_getWvlScanPos(filetag, an_params);
 an_params.Wvls = Wvls;
 an_params.BWs = BWs;
@@ -99,9 +118,10 @@ an_params.um2LD = 1/((Wvls(1)/1000)*10.96/2.1); % Conversieon to lambda/D: 1/(la
                        % f = 10.96 taken from Thorlabs A397 datasheet
 
 % Manual input for normalization values, leave empty if values are in
-    %fits file
+    %fits file, simply copy and paste from datanotes - don't use raw values
 an_params.NormVals = [0.87951; 0.98841; 1.07493; 2.24405; 2.51165; 2.06093; 2.21724; 2.40134; 2.83825];
 %% Section 1: Donut Sensor Matrix
+% Plots the contour plot of the scan at every wavelength in linear scale
 if Sec2Run(1)
 	disp("______Section 1:______")
     
@@ -169,6 +189,7 @@ if Sec2Run(1)
 end
 
 %% Section 2: Donut Sensor Matrix (Log)
+% Plots the contour plot of the scan at every wavelength in log scale
 if Sec2Run(2)
     disp('______Section 2:______')
     
@@ -239,6 +260,7 @@ if Sec2Run(2)
 end
 
 %% Section 3: Eta S linear plot
+% Plots null depth vs wavlength in linear scale
 if Sec2Run(3)
 	disp("______Section 3:______")
     
@@ -298,6 +320,7 @@ if Sec2Run(3)
 end
 
 %% Section 4: Eta S log plot
+% Plots null depth vs wavelength with Eta S in log scale
 if Sec2Run(4)
     disp('______Section 4:______')
     
@@ -353,7 +376,7 @@ end
 
 
 %% Section 5: Eta S xyLog plot
-%  --- The null/planet coupling are bad but the symmetry is good
+% Plots null depth vs wavelength with Eta S and wavelength in log scale
 if Sec2Run(5)
 	disp("______Section 5:______")
     
@@ -408,6 +431,8 @@ if Sec2Run(5)
     fprintf("______End Section 5\n\n")
 end 
 %% Setup for Eta P plots
+% Extracts coupling values at each wavelength, using radial average if
+% indicated
 if Sec2Run(6) || Sec2Run(7) || Sec2Run(7)
     %- Get the normalized data (full eta map)
     nmFine  = ['071019_VAR1' filesep filetag];
@@ -499,6 +524,7 @@ if Sec2Run(6) || Sec2Run(7) || Sec2Run(7)
     end
 end
 %% Section 6: Eta P linear plot
+% Plots coupling vs wavelength in linear scale
 if Sec2Run(6)
 	disp("______Section 6:______")
     
@@ -536,7 +562,7 @@ if Sec2Run(6)
 end 
 
 %% Section 7: Eta P log plot
-%  NOTE: extracts specific frames from the scanned cube
+% Plots coupling vs wavelength with Eta P in log scale
 if Sec2Run(7)
 	disp("______Section 7:______")
     
@@ -568,7 +594,7 @@ if Sec2Run(7)
     fprintf("______End Section 7\n\n")
 end 
 %% Section 8: Eta P xylog plot
-%  NOTE: extracts specific frames from the scanned cube
+% Plots coupling vs wavelength with Eta P and wavelength in log scale
 if Sec2Run(8)
 	disp("______Section 8:______")
     
