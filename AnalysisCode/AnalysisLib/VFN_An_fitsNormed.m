@@ -59,7 +59,7 @@ function nrmDat = VFN_An_fitsNormed(nm2find, frame, an_params)
     %-- Define parameters
     gnFactor    = an_params.gnFactor;
     lensTHPT    = an_params.lensTHPT;
-    rdOfmto     = an_params.rdOfmto;
+    rdOfmto     = VFN_getFmtoResponsivity(an_params.Wvls(frame(1)));%an_params.rdOfmto;
     FR          = an_params.FR;
     PL          = an_params.PL;
     
@@ -72,8 +72,11 @@ function nrmDat = VFN_An_fitsNormed(nm2find, frame, an_params)
     raw     = raw(:,:,:,frame(1),frame(2),frame(3));
     scl     = scl(:,:,:,frame(1),frame(2),frame(3));
     
+    % Extract the type of scan
+    scantype = VFN_An_getKwd(kwds, 'CNTRLCD');
+    
     %-- Check vort/foc were not scanned - ie. effectively a single scan
-    if VFN_An_getKwd(kwds, 'NAXIS') ~= 3
+    if ((VFN_An_getKwd(kwds, 'NAXIS') ~= 3) & (scantype ~= 'WavelengthScan'))
         error('Matrix dimensionality is not correct for this analysis:\n    %s', nm2find)
     end
     
@@ -91,24 +94,49 @@ function nrmDat = VFN_An_fitsNormed(nm2find, frame, an_params)
     gns = gns.^-(scl(:,:,1)-6);
     nrm = nrm.*gns;
     
-    %-- Check if red PM was used. Assumes that if normflag keyword is missing,
-        %the cube predates this keyword and has the red PM data in it.
-        % Note: getKwd() returns [] if the keyword was not present
-    pmflg = VFN_An_getKwd(kwds, 'NORMFLAG');
-    if isempty(pmflg) || pmflg == 'T'
-        %-- Get red thorlabs PM value for normalization since it exists
-        % Read from keywords
-        nrmVl = VFN_An_getKwd(kwds, 'NORMMEAN');
-        % Account for losses in the final lens
-        nrmVl = nrmVl*lensTHPT;
-        % Convert from Watts to uWatts
-        nrmVl = nrmVl*10^6;
+    
+    if scantype == 'WavelengthScan'
+        if isempty(an_params.NormVals)
+            nrmvals = nan(length(an_params.Wvls), length(an_params.BWs));
+            for j = 1:length(an_params.Wvls)
+                for i = 1:length(an_params.BWs)
+                    nrmvals (j,i) = VFN_An_getKwd(kwds, ['RAWNRM' sprintf('%02d', (j-1)*length(an_params.BWs)+i)]);
+                end
+            end
+            if isempty(nrmvals(1,1))
+                for j = 1:length(an_params.Wvls)
+                    for i = 1:length(an_params.BWs)
+                        nrmvals (j,i) = VFN_An_getKwd(kwds, ['NRMVAL' sprintf('%02d', (j-1)*length(an_params.BWs)+i)]);
+                    end
+                end
+                nrmVl = nrmvals(frame(1),frame(2));
+            else
+                nrmVl = nrmvals(frame(1),frame(2))/VFN_getFmtoResponsivity(an_params.Wvls(frame(1)));
+            end
+        else
+            nrmVl = an_params.NormVals(frame(1),frame(2));
+        end 
     else
-        %-- Red PM was not used (flag was present but not 'T[rue]'
-        % Set nrmVal to 1 so that we do not scale/normalize the data
-        nrmVl = 1;
+        %-- Check if red PM was used. Assumes that if normflag keyword is missing,
+            %the cube predates this keyword and has the red PM data in it.
+            % Note: getKwd() returns [] if the keyword was not present
+        pmflg = VFN_An_getKwd(kwds, 'NORMFLAG');
+        if isempty(pmflg) || pmflg == 'T'
+            %-- Get red thorlabs PM value for normalization since it exists
+            % Read from keywords
+            nrmVl = VFN_An_getKwd(kwds, 'NORMMEAN');
+            % Account for losses in the final lens
+            nrmVl = nrmVl*lensTHPT;
+            % Convert from Watts to uWatts
+            nrmVl = nrmVl*10^6;
+            nrmVl = nrmVl/rdOfmto;
+        else
+            %-- Red PM was not used (flag was present but not 'T[rue]'
+            % Set nrmVal to 1 so that we do not scale/normalize the data
+            nrmVl = 1/rdOfmto;
+        end
     end
     
     %-- Normalize the data to get eta's (use nem's equation)
-    nrmDat = nrm.*(rdOfmto*(1/nrmVl)*(1/(FR^2))*(1/(PL^2)));
+    nrmDat = nrm.*((1/nrmVl)*(1/(FR^2))*(1/(PL^2)));
 end
