@@ -13,7 +13,8 @@
 % between 0 and MaxBW not including zero, with the number of bandwidths
 % indicated in ScanPoi 
 % for example,
-% MaxBW = 60 and ScanPoi = 10 would scan 6,12,18,24,30,36,42,48,54,60
+% MaxBW = 60 and ScanPoi = 10 would scan 6,12,18,24,30,36,42,48,54,60 nm
+% bandwidth for every wavelength center indicated previously
 
 % When there are multiple bandwidths and wavelenths to scan, the script
 % will scan every combination of the two, so if there are 4 wavelengths and
@@ -50,7 +51,7 @@ WLMinMax = [620,820];
 MaxBW = 3;
 %Number of points being scanned
 ScanPoi = 1;
-%Varia power values for normalization
+%Varia power values for normalization (these should be the 'raw' values, so no femto responsivity factor)
 VarPow = [0.24627; 0.28487; 0.37218; 0.34387; 0.43660; 0.58485; 0.97818; 1.17677; 2.75001; 2.40778; 3.13616];
 
 

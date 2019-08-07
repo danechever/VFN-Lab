@@ -12,7 +12,8 @@
 % between 0 and MaxBW not including zero, with the number of bandwidths
 % indicated in ScanPoi 
 % for example,
-% MaxBW = 60 and ScanPoi = 10 would scan 6,12,18,24,30,36,42,48,54,60
+% MaxBW = 60 and ScanPoi = 10 would scan 6,12,18,24,30,36,42,48,54,60 nm
+% bandwidth for every wavelength center indicated previously
 
 % When there are multiple bandwidths and wavelenths to scan, the script
 % will scan every combination of the two, so if there are 4 wavelengths and
