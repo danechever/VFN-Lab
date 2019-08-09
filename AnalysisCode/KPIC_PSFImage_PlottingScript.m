@@ -24,6 +24,7 @@ vort2_crp   = vort1_crp;    % Crop window (+/- this value)
 vort2_cnt = [81 232];      % Crop center for IN frame. [row col]
 vort3_crp   = 51;    % Crop window (+/- this value)
 vort3_cnt = [86 224];      % Crop center for IN frame. [row col]
+apod_crp = 26;
 % _Out is automatically centered at peak
 
 %-- Choose colormap for saved images
@@ -465,5 +466,152 @@ if isPlotLogs
     title('Vortex 3 (DS110419-20) LOG10(Out) - Cropped')
     if isSaveFigs
         export_fig([svfld 'Vort3Out_Crp_BckSub_Log.png'],'-r300', '-painters');
+    end
+end
+
+
+%% Apodizer: 
+fprintf('\n______ Apoodizer ______\n')
+
+%-- Load the IN file
+flnm = [rwfld 'KPIC_Apod_ApodIn_PSF2.fits'];
+apodIn = fitsread(flnm, 'image');
+
+%-- Load the Out file
+flnm = [rwfld 'KPIC_Apod_ApodOut_PSF2.fits'];
+apodOut = fitsread(flnm, 'image');
+
+%-- Load the Background file
+flnm = [rwfld 'KPIC_Apod_Background_PSF2.fits'];
+apodBck = fitsread(flnm, 'image');
+
+%-- Remove outliers (where flux changed significantly)
+% Remove from IN file
+mns = squeeze(mean(apodIn, [1 2]));    % Average frames individually 
+mn2 = mean(mns);                        % Average all frames to get outliers
+excl = (mns > mn2 + tol)+(mns < mn2 - tol); % Find outliers (+ for logical or)
+apodIn = apodIn(:,:,~logical(excl));  % Extract non-outlier frames
+fprintf('-- Removed %d Outlier Frames from ApodIn cube\n', sum(excl))
+fprintf('   Original STD of mean: %8.4f\n', std(mns));
+mns = squeeze(mean(apodIn, [1 2]));    % Calculate new std
+fprintf('   STD of new mean:      %8.4f\n', std(mns));
+fprintf('   New mean:             %8.4f\n', mean(mns));
+% Remove from Out file
+mns = squeeze(mean(apodOut, [1 2]));   % Average frames individually 
+mn2 = mean(mns);                        % Average all frames to get outliers
+excl = (mns > mn2 + tol)+(mns < mn2 - tol); % Find outliers (+ for logical or)
+apodOut = apodOut(:,:,~logical(excl));  % Extract non-outlier frames
+fprintf('-- Removed %d Outlier Frames from ApodOut cube\n', sum(excl))
+fprintf('   Original STD of mean: %8.4f\n', std(mns));
+mns = squeeze(mean(apodOut, [1 2]));    % Calculate new std
+fprintf('   STD of new mean:      %8.4f\n', std(mns));
+fprintf('   New mean:             %8.4f\n', mean(mns));
+%-- NO NEED TO REMOVE OUTLIERS FROM BACKGROUND SINCE LASER NOT PRESENT
+mns = squeeze(mean(apodBck, 'all'));
+fprintf('-- No Outliers Removed From Apod Background cube\n')
+fprintf('   Mean of background:   %8.4f\n', mns);
+
+%-- Average outlier-removed data
+apodIn  = mean(apodIn, 3);
+apodOut = mean(apodOut, 3); 
+apodBck = mean(apodBck, 3);
+
+%-- Subtract Background 
+apodIn_bk  = apodIn - apodBck;
+apodOut_bk = apodOut - apodBck;
+
+if isPlotFull
+    %-- Display data [FULL FRAME]
+    % In data
+    figure;
+    imagesc(apodIn_bk);
+    axis image
+    colorbar;
+    title('Apodizer IN')
+    % Out data
+    figure;
+    imagesc(apodOut_bk);
+    axis image
+    colorbar;
+    title('Apodizer Out')
+    % Background
+    figure;
+    imagesc(log10(apodBck));
+    axis image
+    colorbar;
+    title('Apodizer LOG10(Background)')
+end
+
+%-- Display data [CROPPED FRAME]
+% In data
+figure('color','white','units', 'inches', 'Position', [0 0 6 6]);
+[~, cntI] = max(apodIn_bk(:));
+[apod_cnt(1), apod_cnt(2)] = ind2sub(size(apodIn_bk), cntI);
+crp(1) = max(apod_cnt(1)-apod_crp, 0);  % Make sure crp vals are within frame bounds
+crp(2) = min(apod_cnt(1)+apod_crp, size(apodIn_bk, 1));
+crp(3) = max(apod_cnt(2)-apod_crp, 0);
+crp(4) = min(apod_cnt(2)+apod_crp, size(apodIn_bk, 2));
+apodIn_crp = apodIn_bk(crp(1):crp(2),crp(3):crp(4),:);
+imagesc(apodIn_crp);
+axis image
+colormap(cmap)
+colorbar;
+title('Apodizer IN - Cropped')
+if isSaveFigs
+    export_fig([svfld 'ApodIn_Crp_BckSub.png'],'-r300', '-painters');
+end
+% Out data
+figure('color','white','units', 'inches', 'Position', [0 0 6 6]);
+[~, cntI] = max(apodOut_bk(:));
+[cnt(1), cnt(2)] = ind2sub(size(apodOut_bk), cntI);
+crp(1) = max(cnt(1)-apod_crp, 0);  % Make sure crp vals are within frame bounds
+crp(2) = min(cnt(1)+apod_crp, size(apodOut_bk, 1));
+crp(3) = max(cnt(2)-apod_crp, 0);
+crp(4) = min(cnt(2)+apod_crp, size(apodOut_bk, 2));
+apodOut_crp = apodOut_bk(crp(1):crp(2),crp(3):crp(4),:);
+imagesc(apodOut_crp);
+axis image
+colormap(cmap)
+colorbar;
+title('Apodizer Out - Cropped')
+if isSaveFigs
+    export_fig([svfld 'ApodOut_Crp_BckSub.png'],'-r300', '-painters');
+end
+% Background
+figure('color','white','units', 'inches', 'Position', [0 0 6 6]);
+apodBck_crp = apodBck(crp(1):crp(2),crp(3):crp(4),:); % Crop to "Out" dims
+imagesc(log10(apodBck_crp));
+axis image
+colormap(cmap)
+colorbar;
+title('Apodizer LOG10(Background) - Cropped')
+if isSaveFigs
+    export_fig([svfld 'ApodBck_Crp.png'],'-r300', '-painters');
+end
+
+if isPlotLogs
+    % In data
+    figure('color','white','units', 'inches', 'Position', [0 0 6 6]);
+    apodIn_crpLog = apodIn_crp;
+    apodIn_crpLog(apodIn_crpLog<=0) = min(apodIn_crp(apodIn_crp>0));
+    imagesc(log10(apodIn_crpLog));
+    axis image
+    colormap(cmap)
+    colorbar;
+    title('Apodizer LOG10(IN) - Cropped')
+    if isSaveFigs
+        export_fig([svfld 'ApodIn_Crp_BckSub_Log.png'],'-r300', '-painters');
+    end
+    % Out data
+    figure('color','white','units', 'inches', 'Position', [0 0 6 6]);
+    apodOut_crpLog = apodOut_crp;
+    apodOut_crpLog(apodOut_crpLog<=0) = min(apodOut_crp(apodOut_crp>0));
+    imagesc(log10(apodOut_crpLog));
+    axis image
+    colormap(cmap)
+    colorbar;
+    title('Apodizer LOG10(Out) - Cropped')
+    if isSaveFigs
+        export_fig([svfld 'ApodOut_Crp_BckSub_Log.png'],'-r300', '-painters');
     end
 end
