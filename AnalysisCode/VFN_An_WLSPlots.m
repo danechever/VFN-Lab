@@ -1,4 +1,4 @@
-% Plotting Script for analyzing the data from Bandwidth scans
+% Plotting Script for analyzing the data from wavelength scans
 
 % This script is used to find and plot the null and coupling for each of
 % bandwidths scanned as well as the contour plots if needed
@@ -11,7 +11,7 @@
 % an_params.NormVals empty and that the normalization values are stored in
 % the fits file.
 
-% NOTE: this script isn't capable of handling multiple wavelength centers
+% NOTE: this script isn't capable of handling multiple bandwidths
 close all
 clear all
 
@@ -70,8 +70,8 @@ an_params.PL = 0.9966;      % Propagation loss term in nem's equation.
 nmWpath = { [fldnm '\*.fits']};
 an_params.STRNMS = VFN_An_getSTRNMS(nmWpath);
 
-% name of fits cube
-filetag = '74BWS_Var780Dat7_fullCube';
+% 
+filetag = '84WLS_Var780Dat4_fullCube';
 % Sections to Run
 Sec2Run = [ 
     true;          %Section 1  ** Donut Sensor Matrix
@@ -109,19 +109,19 @@ if ~isPrintLoc
 end
 
 % Loading the wavelengths and bandwidths scanned
-[BWs, Wvls] = VFN_An_getWvlScanPos(filetag, an_params);
-an_params.BWs = BWs;
+[BWs,Wvls] = VFN_An_getWvlScanPos(filetag, an_params);
 an_params.Wvls = Wvls;
+an_params.BWs = BWs;
 
 % Conversion factor from microns to L/D in focal plane: [L/D / micron]
-an_params.um2LD = 1/((Wvls(1)/1000)*10.96/2.1); % Conversion to lambda/D: 1/(lambda*F#) 
+an_params.um2LD = 1/((Wvls(1)/1000)*10.96/2.1); % Conversieon to lambda/D: 1/(lambda*F#) 
                        % f = 10.96 taken from Thorlabs A397 datasheet
 
 % Manual input for normalization values, leave empty if values are in
     %fits file, simply copy and paste from datanotes - don't use raw values
-an_params.NormVals = [6.46973 13.43771 20.28842 26.57895 32.91610 38.78649 44.59445 49.96976 55.70637 60.81887];
+an_params.NormVals = [0.87951; 0.98841; 1.07493; 2.24405; 2.51165; 2.06093; 2.21724; 2.40134; 2.83825];
 %% Section 1: Donut Sensor Matrix
-% Plots the contour plot of the scan at every bandwidth in linear scale
+% Plots the contour plot of the scan at every wavelength in linear scale
 if Sec2Run(1)
 	disp("______Section 1:______")
     
@@ -129,8 +129,12 @@ if Sec2Run(1)
     nmFine  = ['071019_VAR1' filesep filetag];
     
     
-    for i = 1:length(BWs)
-        nrmFine(i,:,:) = VFN_An_fitsNormed(nmFine,[1,i,1],an_params);
+    for i = 1:length(Wvls)
+        % Conversion factor from microns to L/D in focal plane: [L/D / micron]
+        an_params.um2LD = 1/((Wvls(i)/1000)*10.96/2.1); % Conversion to lambda/D: 1/(lambda*F#) 
+                       % f = 10.96 taken from Thorlabs A397 datasheet
+                       
+        nrmFine(i,:,:) = VFN_An_fitsNormed(nmFine,[i,1,1],an_params);
 
         %- Extract eta_s and location
         [eta_sFine(i), indFine(i,:)] = VFN_An_getEta_s(squeeze(nrmFine(i,:,:)));
@@ -160,7 +164,7 @@ if Sec2Run(1)
         %end
     end
     
-    for j = 1:length(BWs)
+    for j = 1:length(Wvls)
         %- Get axes for image (relative to null point):
         [xaxFine, yaxFine] = VFN_An_getAxes(nmFine, squeeze(indFine(j,:)),an_params);
         
@@ -169,14 +173,14 @@ if Sec2Run(1)
         %fighAsym = VFN_An_fitsDisp(nrmFine, xaxFine, yaxFine, figh);
         fighAsym = VFN_An_fitsDisp(squeeze(nrmFine(j,:,:)), xaxFine, yaxFine, figh);
         %imagesc(squeeze(nrmFine(j,:,:)))
-        title(['Scan at ' num2str(Wvls(1)) 'nm with ' num2str(BWs(j)) 'nm bandwidth'])%, 'Position', [-0.0183 1.1178-0.05 0])
+        title(['Scan at ' num2str(Wvls(j)) 'nm with 3nm bandwidth'])%, 'Position', [-0.0183 1.1178-0.05 0])
         xlabel('\lambda/D')
         ylabel('\lambda/D')
         set(gca,'fontsize',fontsize2)
         
         if isSaveFig
             [~, tmpnm, ~] = fileparts(nmFine);
-            export_fig([savefld filesep tmpnm '_An_Lin_BW' num2str(BWs(j)) '_CoupMap.png'],'-r300', '-painters');
+            export_fig([savefld filesep tmpnm '_An_Lin_WL' num2str(Wvls(j)) '_CoupMap.png'],'-r300', '-painters');
         end
     end
     
@@ -185,15 +189,19 @@ if Sec2Run(1)
 end
 
 %% Section 2: Donut Sensor Matrix (Log)
-% Plots the contour plot of the scan at every bandwidth in log scale
-if Sec2Run(2)wavelength
+% Plots the contour plot of the scan at every wavelength in log scale
+if Sec2Run(2)
     disp('______Section 2:______')
     
     %- Get the normalized data (full eta map)
     nmFine  = ['071019_VAR1' filesep filetag];
     
-    for i = 1:length(BWs)
-        nrmFine(i,:,:) = VFN_An_fitsNormed(nmFine,[1,i,1],an_params);
+    for i = 1:length(Wvls)
+        % Conversion factor from microns to L/D in focal plane: [L/D / micron]
+        an_params.um2LD = 1/((Wvls(i)/1000)*10.96/2.1); % Conversion to lambda/D: 1/(lambda*F#) 
+                       % f = 10.96 taken from Thorlabs A397 datasheet
+                       
+        nrmFine(i,:,:) = VFN_An_fitsNormed(nmFine,[i,1,1],an_params);
 
         %- Extract eta_s and location
         [eta_sFine(i), indFine(i,:)] = VFN_An_getEta_s(squeeze(nrmFine(i,:,:)));
@@ -223,7 +231,7 @@ if Sec2Run(2)wavelength
         %end
     end
     
-    for j = 1:length(BWs)
+    for j = 1:length(Wvls)
         %- Get axes for image (relative to null point):
         [xaxFine, yaxFine] = VFN_An_getAxes(nmFine, squeeze(indFine(j,:)),an_params);
         
@@ -236,14 +244,14 @@ if Sec2Run(2)wavelength
         end
         fighAsym = VFN_An_fitsDisp(squeeze(nrmFine(j,:,:)), xaxFine, yaxFine, figh);
         %imagesc(squeeze(nrmFine(j,:,:)))
-        title(['Scan at ' num2str(Wvls(1)) 'nm with ' num2str(BWs(j)) 'nm bandwidth [log]'])%, 'Position', [-0.0183 1.1178-0.05 0])
+        title(['Scan at ' num2str(Wvls(j)) 'nm with 3nm bandwidth [log]'])%, 'Position', [-0.0183 1.1178-0.05 0])
         xlabel('\lambda/D')
         ylabel('\lambda/D')
         set(gca,'fontsize',fontsize2)
         
         if isSaveFig
             [~, tmpnm, ~] = fileparts(nmFine);
-            export_fig([savefld filesep tmpnm '_An_Log_BW' num2str(BWs(j)) '_CoupMap.png'],'-r300', '-painters');
+            export_fig([savefld filesep tmpnm '_An_Log_WL' num2str(Wvls(j)) '_CoupMap.png'],'-r300', '-painters');
         end
         
     end
@@ -252,7 +260,7 @@ if Sec2Run(2)wavelength
 end
 
 %% Section 3: Eta S linear plot
-% Plots null depth vs bandwidth in linear scale
+% Plots null depth vs wavlength in linear scale
 if Sec2Run(3)
 	disp("______Section 3:______")
     
@@ -260,8 +268,8 @@ if Sec2Run(3)
     nmFine  = ['071019_VAR1' filesep filetag];
     
     
-    for i = 1:length(BWs)
-        nrmFine(i,:,:) = VFN_An_fitsNormed(nmFine,[1,i,1],an_params);
+    for i = 1:length(Wvls)
+        nrmFine(i,:,:) = VFN_An_fitsNormed(nmFine,[i,1,1],an_params);
 
         %- Extract eta_s and location
         [eta_sFine(i), indFine(i,:)] = VFN_An_getEta_s(squeeze(nrmFine(i,:,:)));
@@ -278,13 +286,13 @@ if Sec2Run(3)
                      indFine(i,2), indFine(i,1), indFine(i,4), indFine(i,5), indFine(i,6));
         end
     end
-    for j = 1:length(Wvls)
+    for j = 1:length(BWs)
         %- Show Null frame
         figh = figure('color','white','units', 'inches', 'Position', [0 0 7 6]);
-        xax = BWs ./ Wvls(1);
+        xax = Wvls;
         eta_sFine = eta_sFine .* 1000;
         scatter(xax,eta_sFine,50, 'filled')
-        xlabel('Bandwidth  [\Delta\lambda/\lambda_0]')
+        xlabel('Wavelength  [nm]')
         ylabel('\eta_{s} [\times 10^{-3}]')
         if max(eta_sFine)*1.2>1
             ylim([0 max(eta_sFine)*1.2]);
@@ -294,7 +302,7 @@ if Sec2Run(3)
         set(gca,'fontsize',fontsize2)
         grid on;
         range = [xlim;ylim];
-        title(['Bandwidth Scan about ' num2str(Wvls(1)) 'nm'], 'VerticalAlignment', 'bottom','HorizontalAlignment', 'left', 'Position', [range(1,1) range(2,2)+.05*(range(2,2)-range(2,1)) 0], 'fontsize', fontsize2)
+        title(['Wavelength Scan from ' num2str(Wvls(1)) 'nm to ' num2str(Wvls(end)) 'nm (' num2str(BWs(1)) 'nm BW)'], 'VerticalAlignment', 'bottom','HorizontalAlignment', 'left', 'Position', [range(1,1) range(2,2)+.05*(range(2,2)-range(2,1)) 0], 'fontsize', fontsize2)
         if isLinFit
             P = polyfit(xax,eta_sFine,1);
             yfit = P(1)*xax+P(2);
@@ -304,7 +312,7 @@ if Sec2Run(3)
         end
         if isSaveFig
             [~, tmpnm, ~] = fileparts(nmFine);
-            export_fig([savefld filesep tmpnm '_An_BWGraph_Lin_etaS_CoupMap.png'],'-r300', '-painters');
+            export_fig([savefld filesep tmpnm '_An_WLGraph_Lin_etaS_CoupMap.png'],'-r300', '-painters');
         end
     end
        
@@ -312,7 +320,7 @@ if Sec2Run(3)
 end
 
 %% Section 4: Eta S log plot
-% Plots null depth vs bandwidth with Eta S in log scale
+% Plots null depth vs wavelength with Eta S in log scale
 if Sec2Run(4)
     disp('______Section 4:______')
     
@@ -320,8 +328,8 @@ if Sec2Run(4)
     nmFine  = ['071019_VAR1' filesep filetag];
     
     
-    for i = 1:length(BWs)
-        nrmFine(i,:,:) = VFN_An_fitsNormed(nmFine,[1,i,1],an_params);
+    for i = 1:length(Wvls)
+        nrmFine(i,:,:) = VFN_An_fitsNormed(nmFine,[i,1,1],an_params);
 
         %- Extract eta_s and location
         [eta_sFine(i), indFine(i,:)] = VFN_An_getEta_s(squeeze(nrmFine(i,:,:)));
@@ -342,13 +350,14 @@ if Sec2Run(4)
     %- Show Null frame
     figh = figure('color','white','units', 'inches', 'Position', [0 0 7 6]);
     %fighAsym = VFN_An_fitsDisp(nrmFine, xaxFine, yaxFine, figh);
-    xax = BWs ./ Wvls(1);
+    xax = Wvls;
     scatter(xax,eta_sFine,50, 'filled')
-    xlabel('Bandwidth  [\Delta\lambda/\lambda_0]')
+    xlabel('Wavelength  [nm]')
     ylabel('\eta_{s} [log]')
     set(gca,'fontsize',fontsize2)
+    grid on;
     range = [xlim;ylim];
-    title(['Bandwidth Scan about ' num2str(Wvls(1)) 'nm'], 'VerticalAlignment', 'bottom','HorizontalAlignment', 'left', 'Position', [range(1,1) range(2,2)+.05*(range(2,2)-range(2,1)) 0], 'fontsize', fontsize2)
+    title(['Wavelength Scan from ' num2str(Wvls(1)) 'nm to ' num2str(Wvls(end)) 'nm (' num2str(BWs(1)) 'nm BW)'], 'VerticalAlignment', 'bottom','HorizontalAlignment', 'left', 'Position', [range(1,1) range(2,2)+.05*(range(2,2)-range(2,1)) 0], 'fontsize', fontsize2)
     if isLinFit
         P = polyfit(xax,eta_sFine,1);
         yfit = P(1)*xax+P(2);
@@ -359,7 +368,7 @@ if Sec2Run(4)
 
     if isSaveFig
         [~, tmpnm, ~] = fileparts(nmFine);
-        export_fig([savefld filesep tmpnm '_An_BWGraph_Log_etaS_CoupMap.png'],'-r300', '-painters');
+        export_fig([savefld filesep tmpnm '_An_WLGraph_Log_etaS_CoupMap.png'],'-r300', '-painters');
     end
     
     fprintf("______End Section 4\n\n")
@@ -367,7 +376,7 @@ end
 
 
 %% Section 5: Eta S xyLog plot
-% Plots null depth vs bandwidth with Eta S and bandwidth in log scale
+% Plots null depth vs wavelength with Eta S and wavelength in log scale
 if Sec2Run(5)
 	disp("______Section 5:______")
     
@@ -375,8 +384,8 @@ if Sec2Run(5)
     nmFine  = ['071019_VAR1' filesep filetag];
     
     
-    for i = 1:length(BWs)
-        nrmFine(i,:,:) = VFN_An_fitsNormed(nmFine,[1,i,1],an_params);
+    for i = 1:length(Wvls)
+        nrmFine(i,:,:) = VFN_An_fitsNormed(nmFine,[i,1,1],an_params);
 
         %- Extract eta_s and location
         [eta_sFine(i), indFine(i,:)] = VFN_An_getEta_s(squeeze(nrmFine(i,:,:)));
@@ -393,18 +402,19 @@ if Sec2Run(5)
                      indFine(i,2), indFine(i,1), indFine(i,4), indFine(i,5), indFine(i,6));
         end
     end
-    for j = 1:length(Wvls)
+    for j = 1:length(BWs)
         %- Show Null frame
         figh = figure('color','white','units', 'inches', 'Position', [0 0 7 6]);
-        xax = BWs ./ Wvls(1); 
+        xax = Wvls; 
         xax = log10(xax);
         eta_sFine = log10(eta_sFine);
         scatter(xax,eta_sFine,50, 'filled')
-        xlabel(['Bandwidth about ' num2str(Wvls(j)) 'nm [log(\Delta\lambda/\lambda_0)]'])
+        xlabel('Wavelength [log(nm)]')
         ylabel('\eta_{s} [log]')
         set(gca,'fontsize',fontsize2)
+        grid on;
         range = [xlim;ylim];
-        title(['Bandwidth Scan about ' num2str(Wvls(1)) 'nm'], 'VerticalAlignment', 'bottom','HorizontalAlignment', 'left', 'Position', [range(1,1) range(2,2)+.05*(range(2,2)-range(2,1)) 0], 'fontsize', fontsize2)
+        title(['Wavelength Scan from ' num2str(Wvls(1)) 'nm to ' num2str(Wvls(end)) 'nm (' num2str(BWs(1)) 'nm BW)'], 'VerticalAlignment', 'bottom','HorizontalAlignment', 'left', 'Position', [range(1,1) range(2,2)+.05*(range(2,2)-range(2,1)) 0], 'fontsize', fontsize2)
         if isLinFit
             P = polyfit(xax,eta_sFine,1);
             yfit = P(1)*xax+P(2);
@@ -414,23 +424,23 @@ if Sec2Run(5)
         end
         if isSaveFig
             [~, tmpnm, ~] = fileparts(nmFine);
-            export_fig([savefld filesep tmpnm '_An_BWGraph_xyLog_etaS_CoupMap.png'],'-r300', '-painters');
+            export_fig([savefld filesep tmpnm '_An_WLGraph_xyLog_etaS_CoupMap.png'],'-r300', '-painters');
         end
     end
        
     fprintf("______End Section 5\n\n")
 end 
 %% Setup for Eta P plots
-% Extracts coupling values at each bandwidth, using radial average if
+% Extracts coupling values at each wavelength, using radial average if
 % indicated
 if Sec2Run(6) || Sec2Run(7) || Sec2Run(7)
     %- Get the normalized data (full eta map)
     nmFine  = ['071019_VAR1' filesep filetag];
     
-    eta_pFine = nan(length(BWs),1);
+    eta_pFine = nan(length(Wvls),1);
     
-    for i = 1:length(BWs)
-        nrmFine(i,:,:) = VFN_An_fitsNormed(nmFine,[1,i,1],an_params);
+    for i = 1:length(Wvls)
+        nrmFine(i,:,:) = VFN_An_fitsNormed(nmFine,[i,1,1],an_params);
         if isRadAvg && ~isFixed
             %- Extract eta_s and location
             [eta_sFine(i), indFine(i,:)] = VFN_An_getEta_s(squeeze(nrmFine(i,:,:)));
@@ -496,7 +506,7 @@ if Sec2Run(6) || Sec2Run(7) || Sec2Run(7)
         %Average for the donut ring with the peak coupling
         [~, distR] = max(radvg2a);
         
-        for i = 1:length(BWs)
+        for i = 1:length(Wvls)
             %-- Get axes for image (relative to null point):
             [xax2a, yax2a]  = VFN_An_getAxes(nmFine, ind_SFix, an_params);
             %-- Calculate average radial profile
@@ -514,16 +524,16 @@ if Sec2Run(6) || Sec2Run(7) || Sec2Run(7)
     end
 end
 %% Section 6: Eta P linear plot
-% Plots coupling vs bandwidth in linear scale
+% Plots coupling vs wavelength in linear scale
 if Sec2Run(6)
 	disp("______Section 6:______")
     
-    for j = 1:length(Wvls)
+    for j = 1:length(BWs)
         %- Show Null frame
         figh = figure('color','white','units', 'inches', 'Position', [0 0 7 6]);
-        xax = BWs ./ Wvls(1);
+        xax = Wvls;
         scatter(xax,eta_pFine*100,50,'red', 'filled')
-        xlabel('Bandwidth  [\Delta\lambda/\lambda_0]')
+        xlabel('Wavelength  [nm]')
         ylabel('\eta_{p} [%]')
         if 1.2*max(eta_pFine)*100>8
             ylim([0 1.2*max(eta_pFine)*100])
@@ -531,7 +541,7 @@ if Sec2Run(6)
             ylim([0 8])
         end
         range = [xlim;ylim];
-        title(['Bandwidth Scan about ' num2str(Wvls(1)) 'nm'], 'VerticalAlignment', 'bottom','HorizontalAlignment', 'left', 'Position', [range(1,1) range(2,2)+.05*(range(2,2)-range(2,1)) 0], 'fontsize', fontsize2)
+        title(['Wavelength Scan from ' num2str(Wvls(1)) 'nm to ' num2str(Wvls(end)) 'nm (' num2str(BWs(1)) 'nm BW)'], 'VerticalAlignment', 'bottom','HorizontalAlignment', 'left', 'Position', [range(1,1) range(2,2)+.05*(range(2,2)-range(2,1)) 0], 'fontsize', fontsize2)
         set(gca,'fontsize',fontsize2)
         grid on;
         
@@ -544,7 +554,7 @@ if Sec2Run(6)
         end
         if isSaveFig
             [~, tmpnm, ~] = fileparts(nmFine);
-            export_fig([savefld filesep tmpnm '_An_BWGraph_Lin_etaP_CoupMap.png'],'-r300', '-painters');
+            export_fig([savefld filesep tmpnm '_An_WLGraph_Lin_etaP_CoupMap.png'],'-r300', '-painters');
         end
     end
        
@@ -552,20 +562,21 @@ if Sec2Run(6)
 end 
 
 %% Section 7: Eta P log plot
-% Plots coupling vs bandwidth with Eta P in log scale
+% Plots coupling vs wavelength with Eta P in log scale
 if Sec2Run(7)
 	disp("______Section 7:______")
     
-    for j = 1:length(Wvls)
+    for j = 1:length(BWs)
         %- Show Null frame
         figh = figure('color','white','units', 'inches', 'Position', [0 0 7 6]);
-        xax = BWs ./ Wvls(1);
+        xax = Wvls;
         scatter(xax,log10(eta_pFine),50,'red', 'filled')
-        xlabel('Bandwidth  [\Delta\lambda/\lambda_0]')
+        xlabel('Wavelength  [nm]')
         ylabel('\eta_{p} [log]')
         set(gca,'fontsize',fontsize2)
+        grid on;
         range = [xlim;ylim];
-        title(['Bandwidth Scan about ' num2str(Wvls(1)) 'nm'], 'VerticalAlignment', 'bottom','HorizontalAlignment', 'left', 'Position', [range(1,1) range(2,2)+.05*(range(2,2)-range(2,1)) 0], 'fontsize', fontsize2)
+        title(['Wavelength Scan from ' num2str(Wvls(1)) 'nm to ' num2str(Wvls(end)) 'nm (' num2str(BWs(1)) 'nm BW)'], 'VerticalAlignment', 'bottom','HorizontalAlignment', 'left', 'Position', [range(1,1) range(2,2)+.05*(range(2,2)-range(2,1)) 0], 'fontsize', fontsize2)
         if isLinFit
             P = polyfit(xax,log10(eta_pFine),1);
             yfit = P(1)*xax+P(2);
@@ -575,7 +586,7 @@ if Sec2Run(7)
         end
         if isSaveFig
             [~, tmpnm, ~] = fileparts(nmFine);
-            export_fig([savefld filesep tmpnm '_An_BWGraph_Log_etaP_CoupMap.png'],'-r300', '-painters');
+            export_fig([savefld filesep tmpnm '_An_WLGraph_Log_etaP_CoupMap.png'],'-r300', '-painters');
         end
     end
     
@@ -583,20 +594,21 @@ if Sec2Run(7)
     fprintf("______End Section 7\n\n")
 end 
 %% Section 8: Eta P xylog plot
-% Plots coupling vs bandwidth with Eta P and bandwidth in log scale
+% Plots coupling vs wavelength with Eta P and wavelength in log scale
 if Sec2Run(8)
 	disp("______Section 8:______")
     
-    for j = 1:length(Wvls)
+    for j = 1:length(BWs)
         %- Show Null frame
         figh = figure('color','white','units', 'inches', 'Position', [0 0 7 6]);
-        xax = BWs ./ Wvls(1);
+        xax = Wvls;
         scatter(log10(xax),log10(eta_pFine),50,'red', 'filled')
-        xlabel(['Bandwidth about ' num2str(Wvls(j)) 'nm [log(\Delta\lambda/\lambda_0)]'])
+        xlabel('Wavelength [log(nm)]')
         ylabel('\eta_{p} [log]')
         set(gca,'fontsize',fontsize2)
+        grid on;
         range = [xlim;ylim];
-        title(['Bandwidth Scan about ' num2str(Wvls(1)) 'nm'], 'VerticalAlignment', 'bottom','HorizontalAlignment', 'left', 'Position', [range(1,1) range(2,2)+.05*(range(2,2)-range(2,1)) 0], 'fontsize', fontsize2)
+        title(['Wavelength Scan from ' num2str(Wvls(1)) 'nm to ' num2str(Wvls(end)) 'nm (' num2str(BWs(1)) 'nm BW)'], 'VerticalAlignment', 'bottom','HorizontalAlignment', 'left', 'Position', [range(1,1) range(2,2)+.05*(range(2,2)-range(2,1)) 0], 'fontsize', fontsize2)
         if isLinFit
             P = polyfit(log10(xax),log10(eta_pFine),1);
             yfit = P(1)*log10(xax)+P(2);
@@ -606,7 +618,7 @@ if Sec2Run(8)
         end
         if isSaveFig
             [~, tmpnm, ~] = fileparts(nmFine);
-            export_fig([savefld filesep tmpnm '_An_BWGraph_xyLog_etaP_CoupMap.png'],'-r300', '-painters');
+            export_fig([savefld filesep tmpnm '_An_WLGraph_xyLog_etaP_CoupMap.png'],'-r300', '-painters');
         end
     end
     

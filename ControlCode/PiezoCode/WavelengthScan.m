@@ -1,3 +1,32 @@
+% WavelengthScan conducts fiber scans through bandwidths and wavelengths to
+% record how the null and coupling are affected by the bandwidth and
+% wavelength of light
+
+% When setting wavelengths to scan, the script takes the min and max values
+% indicated and creates an even number of points between them, including
+% the minimum and maximum values
+% For example, 
+% WLPoints = 6 and WLMinMax = [400,600] would scan
+% 400,440,480,520,560,600nm
+
+% When setting bandwidths, the script scans evenly spaced bandwidths
+% between 0 and MaxBW not including zero, with the number of bandwidths
+% indicated in ScanPoi 
+% for example,
+% MaxBW = 60 and ScanPoi = 10 would scan 6,12,18,24,30,36,42,48,54,60 nm
+% bandwidth for every wavelength center indicated previously
+
+% When there are multiple bandwidths and wavelenths to scan, the script
+% will scan every combination of the two, so if there are 4 wavelengths and
+% 4 bandwidths being scanned, there will be 16 measurements - be careful
+% with this because some of the analysis code cannot handle this and I have
+% never tested this feature
+
+% This script is also capable of changing the focus axis of the fiber to
+% account for defocus in a linear fashion
+
+% NOTE: Vortex must be in position prior to running script
+
 clear all; close all;
 addpath(genpath('C:\Users\AOlab1\Desktop\DE2\VFN\VFN-Lab\ControlCode'));
 
@@ -8,35 +37,44 @@ global s FMTO_scale
 svFld = 'C:\Users\AOlab1\Desktop\DE2\VFN\PupilVFNCoupling\071019_VAR1';
 
 % Experiment name for figures
-expNm = '13BWS_Var640BWScan2';
+expNm = '126WLS_Var620TO820Dat2';
+% Figures being created
+etaSPlot = true;
+etaPPlot = true;
 
 % Wavelength centers being scanned
-WLPoints = 1;
-% Minimum WL and Maximum WL being scanned
-WLMinMax = [635,800];
+WLPoints = 11;
+% Minimum WL and Maximum WL being scanned [Min,Max]
+WLMinMax = [620,820];
 
 %Highest Bandwidth
-MaxBW = 60;
+MaxBW = 3;
 %Number of points being scanned
-ScanPoi = 10;
-%Varia power values for normalization
-VarPow = [.108 .108 .108 .108 .108];
+ScanPoi = 1;
+%Varia power values for normalization (these should be the 'raw' values, so no femto responsivity factor)
+VarPow = [0.24627; 0.28487; 0.37218; 0.34387; 0.43660; 0.58485; 0.97818; 1.17677; 2.75001; 2.40778; 3.13616];
+
 
 %-- General Varia Settings
 varPWR = 80;
 varEMS = true;
 
 %-- Fiber Scan settings
-xCenter = 118.15;
-yCenter = 81.72;
+xCenter = 75;
+yCenter = 85;
+zCenter = 3.700;
 backlash  = 10; 
-xPoints = 50;
+xPoints = 70;
 yPoints = xPoints;
 % NOTE: code assumes null is min in image so refStep and centering should
   % be s.t. this is true.
-refStep = 5;
+refStep = 13;
 
-isAutoScale = true; % If false, the gain is held fixed. Else, gain
+%-- Focus settings
+isAutoFocus = true;   %if true, changes focus during wavelength scan in linear fashion
+focusRange = [3.757 3.683];
+
+%isAutoScale = true; % If false, the gain is held fixed. Else, gain
                         % is set automatically using FMTO_setAutoGain()
 FMTO_scale = 6;     % Starting gain. the n in: 10^n for the gain setting
 Nread   = 100;      % power samples at a given locaiton
@@ -58,7 +96,29 @@ VFN_NKT_setEmission(NKT, varEMS);
 MDT     = serial('COM4', 'BaudRate', 115200, 'InputBufferSize', 1500, ...
     'Terminator', {'CR' 'LF/CR'});
 fopen(MDT);           %Connect port to device
+%% Zaber Setup
 
+zabbacklash= 0.005;           %Backlash removal step size for zabers
+
+VFN_setUpZabers; % Instantiate the zabers
+
+% Relabel the variables for clarity
+if exist('ax14', 'var')
+    vortX = ax14;
+    clear ax14
+end
+if exist('ax63', 'var')
+    vortY = ax63;
+    clear ax63
+end
+if exist('ax93', 'var')
+    fibZ = ax93;
+    clear ax93
+end
+
+VFN_Zab_move(fibZ, zCenter-zabbacklash);    
+VFN_Zab_move(fibZ, zCenter);
+    
 %% Femto setup
 % Define the gain to apply for scaling. Uses same gain for all: gnFact^(FMTO_scale-6)
 gnFact  = 9.97;
@@ -71,19 +131,28 @@ s = VFN_FMTO_setGain(s, FMTO_scale);
 fprintf('Current Gain setting: %i\n', FMTO_scale)
 %% Main loop
 %Estimate on scan time
-fprintf('Estimated Time:    %6.1f minutes\n', WLPoints*ScanPoi*xPoints*xPoints*.5/60 + .5*ScanPoi);
+fprintf('Estimated Time:    %6.1f minutes\n', WLPoints*ScanPoi*xPoints*xPoints*.5/60 + 1*ScanPoi*WLPoints);
 
 % Wavelength centers being scanned
 WLCenters = linspace(WLMinMax(1),WLMinMax(2), WLPoints);
 
-%Define vector of bandwidths to sample
+% Define vector of bandwidths to sample
 BWs = linspace(round(MaxBW/ScanPoi), MaxBW, ScanPoi);
+
+if isAutoFocus
+    % Define vector of foci
+    foci = linspace(focusRange(1), focusRange(2), WLPoints);
+end
 
 % --Define raw data vectors
 % Values of Nulls
 dat = nan(length(WLCenters),length(BWs),1);
+% Values of Peaks
+datmax = nan(length(WLCenters),length(BWs),1);
 % All data
 dat2D = nan(length(WLCenters),length(BWs),xPoints + 1,yPoints + 1);
+rawdat = nan(WLPoints, ScanPoi, xPoints + 1, yPoints + 1, Nread);
+scls = nan(WLPoints, ScanPoi, xPoints + 1, yPoints + 1, 3);
 
 % Define raster scan properties
 stepSize = refStep/(xPoints/10);
@@ -91,8 +160,16 @@ distX = xCenter-stepSize*xPoints/2:stepSize:xCenter+stepSize*xPoints/2;
 distY = yCenter-stepSize*yPoints/2:stepSize:yCenter+stepSize*yPoints/2;
 dist = [distX', distY'];
 
-%Loop through all wavelengths in Bandwidth
+% Loop through all wavelengths
 for j = 1:length(WLCenters)
+    if isAutoFocus
+        % Change focus
+        VFN_Zab_move(fibZ, foci(j)-zabbacklash);    
+        VFN_Zab_move(fibZ, foci(j));
+    end
+    disp(['Wavelength set to ' num2str(WLCenters(j))]);
+    
+    % Loop through all bandwidths
     for i = 1:length(BWs)
         %-- Set Varia
         % Change bandwidth
@@ -103,19 +180,24 @@ for j = 1:length(WLCenters)
 
         %--Scan fiber
         % norm at current varia settings
-        pmNormReport = VarPow(j,i);   
+        %pmNormReport = VarPow(j,i);   
         % Use courseRaster to do scan
-        measScl = CourseRaster_FullScan(MDT, dist);
+        [measScl, rawdat(j,i,:,:,:), scls(j,i,:,:,:)] = CourseRaster_FullScan(MDT, dist);
 
         % Assume null is min in image
         dat(j,i) = min(measScl(:));
+        datmax(j,i) = max(measScl(:));
 
         % Save 2D raster result matrix
         dat2D(j,i,:,:) = measScl;
     end
 end
-
-eta_s = dat./VarPow';
+if size(VarPow) == size(dat2D(:,:,1,1))
+    for j = 1:length(WLCenters)
+        eta_s(j,:) = dat(j,:) ./ (VarPow*VFN_getFmtoResponsivity(WLCenters(j)));
+        eta_p(j,:) = datmax(j,:) ./ (VarPow*VFN_getFmtoResponsivity(WLCenters(j)));
+    end
+end
 
 %% Clean-Up devices
 %-- Clean up NKT
@@ -134,6 +216,19 @@ DE2_MDTVol(MDT, yCenter, 'y', 0); %yC holds current yVoltage
 % DE2_MDTVol(MDT, Zcenter-backlash, 'z', 0); %zC holds current zVoltage
 % DE2_MDTVol(MDT, Zcenter, 'z', 0); %zC holds current zVoltage
 
+if isAutoFocus
+    %-- Clean up
+    VFN_cleanUpZabers;
+    if exist('vortX', 'var')
+        clear vortX
+    end
+    if exist('vortY', 'var')
+        clear vortY
+    end
+    if exist('fibZ', 'var')
+        clear fibZ
+    end
+end
 fclose(MDT);
 delete(MDT);
 clear MDT;
@@ -143,7 +238,7 @@ for b = 1:length(WLCenters)
         figure();
         colormap('gray');
         %Not sure why transpose and "axis xy" are needed for correct orient.
-        imagesc((distX-xCenter),(distY-yCenter),transpose(squeeze(dat2D(a,:,:))));
+        imagesc((distX-xCenter),(distY-yCenter),transpose(squeeze(dat2D(b,a,:,:))));
         titStr = sprintf('PWR Thru Fib');
         title(titStr)
         axis xy;axis image%axis square;
@@ -153,48 +248,97 @@ for b = 1:length(WLCenters)
         xlabel('Fiber X position [V]')
         ylabel('Fiber Y position [V]')
         tag = sprintf('%ix%i',xPoints,yPoints);
-        tag = sprintf([tag '_BW%i'],BWs(a));
+        tag = sprintf([tag 'Wvl%i_BW%i'],WLCenters(b), BWs(a));
 
         saveas(gcf, [svFld filesep expNm '_' tag '_CoupMap.png'])
     end
 end
-if length(BWs)>1
-    for j = 1:length(WLCenters)
-        figure();
-        scatter(BWs,dat(j,:))
-        titStr = sprintf('Power Vs Bandwidth');
-        title(titStr)
-        xlabel(['Varia Bandwidth about ' num2str(WLCenters(j)) 'nm'])
-        ylabel('Power')
-        saveas(gcf, [svFld filesep expNm '_BWGraph_CoupMap.png'])
+% etaS plots
+if etaSPlot == true
+    if length(BWs)>1
+        for j = 1:length(WLCenters)
+            figure();
+            scatter(BWs,dat(j,:))
+            titStr = sprintf('Power Vs Bandwidth');
+            title(titStr)
+            xlabel(['Varia Bandwidth about ' num2str(WLCenters(j)) 'nm'])
+            ylabel('Power')
+            saveas(gcf, [svFld filesep expNm '_BWGraph_EtaS_CoupMap.png'])
+            if size(VarPow) == size(dat2D(:,:,1,1))
+                figure();
+                scatter(BWs,eta_s(j,:))
+                titStr = sprintf('Eta_s Vs Bandwidth');
+                title(titStr)
+                xlabel(['Varia Bandwidth about ' num2str(WLCenters(j)) 'nm'])
+                ylabel('\eta_{s}')
+                saveas(gcf, [svFld filesep expNm '_BWGraph_EtaS_CoupMap_Norm.png'])
+            end
+        end
+    end
 
-        figure();
-        scatter(BWs,eta_s(j,:))
-        titStr = sprintf('Eta_s Vs Bandwidth');
-        title(titStr)
-        xlabel(['Varia Bandwidth about ' num2str(WLCenters(j)) 'nm'])
-        ylabel('Eta s')
-        saveas(gcf, [svFld filesep expNm '_BWGraph_CoupMap_Norm.png'])
+    if length(WLCenters)>1
+        for i = 1:length(BWs)
+            figure();
+            scatter(WLCenters,dat(:,i))
+            titStr = sprintf('Power Vs Wavelength');
+            title(titStr)
+            xlabel(['Varia Wavelength at ' num2str(BWs(i)) 'nm BW'])
+            ylabel('Power')
+            saveas(gcf, [svFld filesep expNm '_WvlGraph_EtaS_CoupMap.png'])
+            if size(VarPow) == size(dat2D(:,:,1,1))
+                    figure();
+                    scatter(WLCenters,eta_s(:,i))
+                    titStr = sprintf('Eta_s Vs Wavelength');
+                    title(titStr)
+                    xlabel(['Varia Wavelength at ' num2str(BWs(i)) 'nm BW'])
+                    ylabel('\eta_{s}')
+                    saveas(gcf, [svFld filesep expNm '_WvlGraph_EtaS_CoupMap_Norm.png'])
+            end
+        end
     end
 end
+% etaP plots
+if etaPPlot == true
+    if length(BWs)>1
+        for j = 1:length(WLCenters)
+            figure();
+            scatter(BWs,dat(j,:))
+            titStr = sprintf('Power Vs Bandwidth');
+            title(titStr)
+            xlabel(['Varia Bandwidth about ' num2str(WLCenters(j)) 'nm'])
+            ylabel('Power')
+            saveas(gcf, [svFld filesep expNm '_BWGraph_EtaP_CoupMap.png'])
+            if size(VarPow) == size(dat2D(:,:,1,1))
+                figure();
+                scatter(BWs,eta_p(j,:))
+                titStr = sprintf('Eta_p Vs Bandwidth');
+                title(titStr, 'interpreter', 'none')
+                xlabel(['Varia Bandwidth about ' num2str(WLCenters(j)) 'nm'])
+                ylabel('\eta_{p}')
+                saveas(gcf, [svFld filesep expNm '_BWGraph_EtaP_CoupMap_Norm.png'])
+            end
+        end
+    end
 
-if length(WLCenters)>1
-    for i = 1:length(BWs)
-        figure();
-        scatter(WLCenters,dat(:,i))
-        titStr = sprintf('Power Vs Wavelength');
-        title(titStr)
-        xlabel(['Varia Wavelength at ' num2str(BWs(i)) 'nm BW'])
-        ylabel('Power')
-        saveas(gcf, [svFld filesep expNm '_WvlGraph_CoupMap.png'])
-
-        figure();
-        scatter(WLCenters,eta_s(:,i))
-        titStr = sprintf('Eta_s Vs Wavelength');
-        title(titStr)
-        xlabel(['Varia Wavelength at ' num2str(BWs(i)) 'nm BW'])
-        ylabel('Eta s')
-        saveas(gcf, [svFld filesep expNm '_WvlGraph_CoupMap_Norm.png'])
+    if length(WLCenters)>1
+        for i = 1:length(BWs)
+            figure();
+            scatter(WLCenters,dat(:,i))
+            titStr = sprintf('Power Vs Wavelength');
+            title(titStr)
+            xlabel(['Varia Wavelength at ' num2str(BWs(i)) 'nm BW'])
+            ylabel('Power')
+            saveas(gcf, [svFld filesep expNm '_WvlGraph_EtaP_CoupMap.png'])
+            if size(VarPow) == size(dat2D(:,:,1,1))
+                    figure();
+                    scatter(WLCenters,eta_p(:,i))
+                    titStr = sprintf('Eta_p Vs Wavelength');
+                    title(titStr, 'interpreter', 'none')
+                    xlabel(['Varia Wavelength at ' num2str(BWs(i)) 'nm BW'])
+                    ylabel('\eta_{p}')
+                    saveas(gcf, [svFld filesep expNm '_WvlGraph_EtaP_CoupMap_Norm.png'])
+            end
+        end
     end
 end
 
@@ -202,15 +346,19 @@ end
 disp('Null points')
 if(length(BWs)>1)
     for j = 1:length(WLCenters)
-        fprintf('\nWvlCenter: %3dnm\n',WLCenters(j))
+        fprintf('\n        WvlCenter: %3dnm\n',WLCenters(j))
         for i = 1:length(BWs)
-            fprintf('BW: %2dnm, Null = %f\n',BWs(i), dat(j,i))
+            if size(VarPow) == size(dat2D(:,:,1,1)) 
+                fprintf('        BW: %2dnm, Null = %f, Coupling = %f\n',BWs(i), eta_s(j,i),eta_p(j,i))
+            else
+                fprintf('        BW: %2dnm, Null (Unnorm) = %f, Coupling (Unnorm) = %f\n',BWs(i), dat(j,i), datmax(j,i))
+            end
         end
     end
 else
-    fprintf('\nBW: %2dnm\n',BWs(1))
+    fprintf('\n        BW: %2dnm\n',BWs(1))
     for j = 1:length(WLCenters)
-        fprintf('WvlCenter: %3dnm, Null = %f\n',WLCenters(j), dat(j,1))
+        fprintf('        WvlCenter: %3dnm, Null = %f, Coupling = %f\n',WLCenters(j), eta_s(j,1), eta_p(j,1))
     end
 end
 
@@ -303,31 +451,36 @@ import matlab.io.*
 tag = sprintf('fullCube');
 % Cube names
 datCubeNm   = [svFld filesep expNm '_' tag '.fits'];
+GnCubeNm    = [svFld filesep expNm '_' tag '_GAINS.fits'];
+SRCubeNm    = [svFld filesep expNm '_' tag '_SEMIREDU.fits'];
+NormCubeNm    = [svFld filesep expNm '_' tag '_NORMREDU.fits'];
 
 % Define permute order:
-permOrd = [3,2,1];
+permOrd = [4,3,5,1,2];
 
-%-- SAVE DATA CUBE
+%-- SAVE RAW DATA CUBE
 fitmap= fits.createFile(datCubeNm);
-fits.createImg(fitmap,'double',size(permute(dat2D,permOrd)));
+fits.createImg(fitmap,'double',size(permute(rawdat,permOrd)));
 % %header data
-% fits.writeKey(fitmap, 'Xcenter ', xCenter);
-% fits.writeKey(fitmap, 'Xpoints ', Xpoints);
-% fits.writeKey(fitmap, 'Ycenter ', yCenter);
-% fits.writeKey(fitmap, 'Ypoints ', Ypoints);
-% fits.writeKey(fitmap, 'Zcenter ', Zcenter);
-% %fits.writeKey(fitmap,'Zstart ',Zstart);
-% fits.writeKey(fitmap, 'Zpoints ', Zpoints);
-% fits.writeKey(fitmap, 'XYsteps ', StepSize);
-% fits.writeKey(fitmap, 'Zsteps ',  ZStepSize);
-% fits.writeKey(fitmap, 'Nread ',  Nread);
-% fits.writeKey(fitmap, 'NAX1', 'XFiberCoord');
-% fits.writeKey(fitmap, 'NAX2', 'YFiberCoord');
-% fits.writeKey(fitmap, 'NAX3', 'Nread');
-% fits.writeKey(fitmap, 'NAX4', 'Focus');
-% fits.writeKey(fitmap, 'NAX5', 'XVortexCoord');
-% fits.writeKey(fitmap, 'NAX6', 'YVortexCoord');
-% %Zaber status
+fits.writeKey(fitmap, 'Xcenter ', xCenter);
+fits.writeKey(fitmap, 'Xpoints ', xPoints);
+fits.writeKey(fitmap, 'Ycenter ', yCenter);
+fits.writeKey(fitmap, 'Ypoints ', yPoints);
+fits.writeKey(fitmap, 'XYsteps ', stepSize);
+%fits.writeKey(fitmap, 'Zsteps ',  ZStepSize);
+fits.writeKey(fitmap, 'WvlMin ', WLMinMax(1));
+fits.writeKey(fitmap, 'WvlMax ', WLMinMax(2));
+fits.writeKey(fitmap, 'WvlPts', WLPoints);
+fits.writeKey(fitmap, 'BWMin ', MaxBW/ScanPoi);
+fits.writeKey(fitmap, 'BWMax ', MaxBW);
+fits.writeKey(fitmap, 'BWPts', ScanPoi);
+fits.writeKey(fitmap, 'Nread ',  Nread);
+fits.writeKey(fitmap, 'NAX1', 'XFiberCoord');
+fits.writeKey(fitmap, 'NAX2', 'YFiberCoord');
+fits.writeKey(fitmap, 'NAX3', 'Nread');
+fits.writeKey(fitmap, 'NAX4', 'Wavelength');
+fits.writeKey(fitmap, 'NAX5', 'Bandwidth');
+%Zaber status
 % fits.writeKey(fitmap, 'isZab ',  logical(isZab));
 % fits.writeKey(fitmap, 'VXcenter',  VXcenter);
 % fits.writeKey(fitmap, 'VYcenter',  VYcenter);
@@ -335,19 +488,95 @@ fits.createImg(fitmap,'double',size(permute(dat2D,permOrd)));
 % fits.writeKey(fitmap, 'VXpoints', VXpoints);
 % fits.writeKey(fitmap, 'VYpoints', VYpoints);
 % fits.writeKey(fitmap, 'vStepRng', vStepRange);
-% % Power meter level
-% fits.writeKey(fitmap, 'isAutScl', logical(isAutoScale));
-% ind = strfind(GnCubeNm ,'\');
-% fits.writeKey(fitmap, 'DatCube ', GnCubeNm(ind(end-1)+1:end));
-% ind = strfind(SRCubeNm ,'\');
-% fits.writeKey(fitmap, 'SRCube ', SRCubeNm(ind(end-1)+1:end));
-% ind = strfind(NormCubeNm ,'\');
-% fits.writeKey(fitmap, 'NormCube ', NormCubeNm(ind(end-1)+1:end));
-% fits.writeKey(fitmap, 'NormFlag', logical(isPMNorm));
-% fits.writeKey(fitmap, 'NormMean', mean(pmRead));
-% fits.writeKey(fitmap, 'NormSTD', std(pmRead));
-% fits.writeKey(fitmap, 'CNTRLCD', 'PZScan_ZabFoc');
+% Power meter level
+fits.writeKey(fitmap, 'isAutScl', logical(true));
+ind = strfind(GnCubeNm ,'\');
+fits.writeKey(fitmap, 'DatCube ', GnCubeNm(ind(end-1)+1:end));
+ind = strfind(SRCubeNm ,'\');
+fits.writeKey(fitmap, 'SRCube ', SRCubeNm(ind(end-1)+1:end));
+ind = strfind(NormCubeNm ,'\');
+fits.writeKey(fitmap, 'NormCube ', NormCubeNm(ind(end-1)+1:end));
+%fits.writeKey(fitmap, 'NormFlag', logical(isPMNorm));
+%fits.writeKey(fitmap, 'NormMean', mean(pmRead));
+% Saving Normalization data
+for j = 1:length(WLCenters)
+    for i = 1:ScanPoi
+        fits.writeKey(fitmap, ['RAWNRM' sprintf('%02d', (j-1)*ScanPoi+i)], VarPow(j,i));
+    end
+end
+for j = 1:length(WLCenters)
+    for i = 1:ScanPoi
+        fits.writeKey(fitmap, ['NRMVAL' sprintf('%02d', (j-1)*ScanPoi+i)], VarPow(j,i)*VFN_getFmtoResponsivity(WLCenters(j)));
+    end
+end
+
+fits.writeKey(fitmap, 'CNTRLCD', 'WavelengthScan');
 % 
+fits.setCompressionType(fitmap,'NOCOMPRESS');
+fits.writeImg(fitmap,permute(rawdat,permOrd));
+fits.closeFile(fitmap);
+
+%-- SAVE GAIN SETTINGS
+fitmap= fits.createFile(GnCubeNm);
+fits.createImg(fitmap,'double',size(permute(scls, permOrd)));
+%header data
+ind = strfind(datCubeNm,'\');
+fits.writeKey(fitmap, 'DatCube ', datCubeNm(ind(end-1)+1:end));
+fits.writeKey(fitmap, 'NAX1', 'XFiberCoord');
+fits.writeKey(fitmap, 'NAX2', 'YFiberCoord');
+fits.writeKey(fitmap, 'NAX3', '1=FMTO_Scale;2=Gain;3=Bias');
+fits.writeKey(fitmap, 'NAX4', 'Wavelengths');
+fits.writeKey(fitmap, 'NAX5', 'Bandwidth');
+
+fits.setCompressionType(fitmap,'NOCOMPRESS');
+fits.writeImg(fitmap,permute(scls,permOrd));
+fits.closeFile(fitmap);
+
+%-- SAVE SEMI REDUCED DATA
+permOrd = [4,3,1,2];
+fitmap= fits.createFile(SRCubeNm);
+fits.createImg(fitmap,'double',size(permute(dat2D, permOrd)));
+%header data
+ind = strfind(datCubeNm,'\');
+fits.writeKey(fitmap, 'DatCube ', datCubeNm(ind(end-1)+1:end));
+fits.writeKey(fitmap, 'NAX1', 'XFiberCoord');
+fits.writeKey(fitmap, 'NAX2', 'YFiberCoord');
+fits.writeKey(fitmap, 'NAX3', 'Wavelengths');
+fits.writeKey(fitmap, 'NAX4', 'Bandwidth');
+%fits.writeKey(fitmap, 'NAX4', 'Focus');
+
 fits.setCompressionType(fitmap,'NOCOMPRESS');
 fits.writeImg(fitmap,permute(dat2D,permOrd));
 fits.closeFile(fitmap);
+ 
+if (size(VarPow) == size(dat2D(:,:,1,1)))
+    dat2Dnorm = nan(size(dat2D));
+    for j = 1:WLPoints
+        for i = 1:ScanPoi
+            dat2Dnorm(j,i,:,:) = dat2D(j,i,:,:) ./ VarPow(j,i);
+        end
+    end
+    
+    
+    %-- SAVE SEMI REDUCED NORM'D DATA
+    fitmap= fits.createFile(NormCubeNm);
+    fits.createImg(fitmap,'double',size(permute(dat2Dnorm,permOrd)));
+    %header data
+    ind = strfind(datCubeNm,'\');
+    fits.writeKey(fitmap, 'DatCube ', datCubeNm(ind(end-1)+1:end));
+    fits.writeKey(fitmap, 'NAX1', 'XFiberCoord');
+    fits.writeKey(fitmap, 'NAX2', 'YFiberCoord');
+    fits.writeKey(fitmap, 'NAX3', 'Wavelengths');
+    fits.writeKey(fitmap, 'NAX4', 'Bandwidth');
+    %fits.writeKey(fitmap, 'NAX4', 'Focus');
+    %fits.writeKey(fitmap, 'NAX5', 'XVortexCoord');
+    %fits.writeKey(fitmap, 'NAX6', 'YVortexCoord');
+    %fits.writeKey(fitmap, 'NormFlag', logical(isPMNorm));
+    %fits.writeKey(fitmap, 'NormMean', mean(pmRead));
+    %fits.writeKey(fitmap, 'NormSTD', std(pmRead));
+
+    fits.setCompressionType(fitmap,'NOCOMPRESS');
+    fits.writeImg(fitmap,permute(dat2Dnorm,permOrd));
+    fits.closeFile(fitmap);
+end
+
