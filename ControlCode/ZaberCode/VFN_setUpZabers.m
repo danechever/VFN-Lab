@@ -2,9 +2,10 @@ addpath(genpath('C:\Users\AOlab1\Documents\MATLAB\Add-Ons\Toolboxes\Zaber Device
 
 %% Axes Serial Numbers
 % Change these values if the serial numbers on the axes are changed
-AXIS_63 = 51463;    
-AXIS_93 = 52893;    
-AXIS_14 = 52714; 
+AXIS_63 = 51463;
+AXIS_93 = 52893;
+AXIS_14 = 52714;
+AXIS_214 = 59214;
 
 %%  Prepare MATLAB serial port
 % Instantiate the serial object
@@ -43,13 +44,15 @@ try
             ax93 = devs(i);
         elseif serNum == AXIS_14
             ax14 = devs(i);
+        elseif serNum == AXIS_214
+            ax214 = devs(i);
         else
             error('An unrecognized zaber was found\n  Serial Numer: %d',...
                 serNum)
         end
     end
     
-%% Home the axes if they have not been homed
+    %% Home the axes if they have not been homed
     if exist('ax14', 'var')
         if ~ax14.request('get', 'limit.home.triggered').Data
             ax14.home;
@@ -58,7 +61,7 @@ try
     else
         fprintf('ax14 Not Present\n')
     end
-        
+    
     if exist('ax63', 'var')
         if ~ax63.request('get', 'limit.home.triggered').Data
             ax63.home;
@@ -68,14 +71,23 @@ try
         fprintf('ax63 Not Present\n')
     end
     
-     if exist('ax93', 'var')
+    if exist('ax93', 'var')
         if ~ax93.request('get', 'limit.home.triggered').Data
             ax93.home;
             fprintf('ax93 Homed\n')
         end
     else
         fprintf('ax93 Not Present\n')
-    end   
+    end
+    
+    if exist('ax214', 'var')
+        if ~ax214.request('get', 'limit.home.triggered').Data
+            ax214.home;
+            fprintf('ax214 Homed\n')
+        end
+    else
+        fprintf('ax214 Not Present\n')
+    end
     
 catch exception
     % Close port if an error occurs, otherwise it remains locked

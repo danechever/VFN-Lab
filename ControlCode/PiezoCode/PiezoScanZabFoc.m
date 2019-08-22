@@ -115,6 +115,7 @@ pmNormReport = 44.1;   % @635nm typ = 14.08; @780nm typ = 44.1
                         % affects the printed values at end; NORM'd cube
                         % values are still un-normed. SET =1 to not norm
                         % the printed values.
+pmCalWvl = 780; % Wavelength for redPM for normalization
                         
 %~~ END RED (NORM) POWER METER STUFF
 %% Zaber Setup
@@ -141,6 +142,10 @@ if isZab
     if exist('ax93', 'var')
         fibZ = ax93;
         clear ax93
+    end
+    if exist('ax214', 'var')
+        pmX = ax214;
+        clear ax214
     end
     
     if isPMNorm
@@ -199,10 +204,13 @@ if isPMNorm
 
     % Connect to instrument object, obj1.
     fopen(obj1);
+    
+    % Set operating wavelength for calibration
+    fprintf(obj1, ['sense:correction:wavelength ' num2str(pmCalWvl)]);
 end
 %% Perform scan
 distX=(Xcenter-StepSize*Xpoints/2):StepSize:(Xcenter+StepSize*Xpoints/2);
-distY=(Ycenter-StepSize*Ypoints/2):StepSize:(Ycenter+StepSize*Ypoints/2); 
+distY=(Ycenter-StepSize*Ypoints/2):StepSize:(Ycenter+StepSize*Ypoints/2);
 if Zpoints ~= 1
     distZ=(Zcenter-ZStepSize*Zpoints/2):ZStepSize:(Zcenter+ZStepSize*Zpoints/2); 
 else
@@ -446,6 +454,9 @@ if isZab
     if exist('fibZ', 'var')
         clear fibZ
     end
+    if exist('pmX', 'var')
+        clear pmX
+    end
 end
 
 %-- Disconnect from calibration PM
@@ -468,7 +479,8 @@ if isPMNorm
     % Convert the calibration PM value from W to uW
     pmRead1 = pmRead1*10^6;
     % Translate the calibration PM value from uW to V (at 10^6)
-    pmRead1 = pmRead1*0.90;     % V/uW conversion is ~ 0.63 @633; ~0.9 @ 780
+    fmtoSnsScl = VFN_getFmtoResponsivity(pmCalWvl);
+    pmRead1 = pmRead1*fmtoSnsScl;     % V/uW conversion is ~ 0.63 @633; ~0.9 @ 780
 else
     %-- When PM was not read, set normalization value to 1
     pmRead1 = 1;
@@ -608,6 +620,8 @@ fits.writeKey(fitmap, 'NormCube ', NormCubeNm(ind(end-1)+1:end));
 fits.writeKey(fitmap, 'NormFlag', logical(isPMNorm));
 fits.writeKey(fitmap, 'NormMean', mean(pmRead));
 fits.writeKey(fitmap, 'NormSTD', std(pmRead));
+fits.writeKey(fitmap, 'NormWvl', pmCalWvl);
+fits.writeKey(fitmap, 'NormScl', fmtoSnsScl);
 fits.writeKey(fitmap, 'CNTRLCD', 'PZScan_ZabFoc');
 
 fits.setCompressionType(fitmap,'NOCOMPRESS');
