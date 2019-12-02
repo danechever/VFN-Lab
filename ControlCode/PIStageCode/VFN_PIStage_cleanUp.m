@@ -4,12 +4,12 @@
 % NOTE: This will turn off the servo, thereby setting the axis to open-loop
 %
 % It assumes the following variables have already been created by _init.m
-    % 1) 'axis'         = char containing the axis name for use by other scripts
+    % 1) 'axis'         = multidimensional cell containing the axis names for use by other scripts
     % 2) 'Controller'   = instance of controller object
     % 3) 'PIdevice'     = instance of device (USB connection) object
     
 %% Open servo
-PIdevice.SVO ( axis, 0 );
+PIdevice.SVO ( axis, zeros(1, length(axis)) );
     
 %% If you want to close the connection
 PIdevice.CloseConnection ();

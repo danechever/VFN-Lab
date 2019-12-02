@@ -3,7 +3,7 @@
 % It assumes only a single axis is connected (this is the only option for
 %       the E-873 anyway...)
 % In the end, you will be left with three variables needed for control:
-    % 1) 'axis'         = char containing the axis name for use by other scripts
+    % 1) 'axis'         = multidimensional cell containing the axis names for use by other scripts
     % 2) 'Controller'   = instance of controller object
     % 3) 'PIdevice'     = instance of device (USB connection) object
 
@@ -29,7 +29,7 @@ if ( ~(boolPIdeviceConnected ) )
 %     PIdevice = Controller.ConnectRS232 ( comPort, baudRate );
 
 %     % USB
-    controllerSerialNumber = '0';    % Use "devicesUsb = Controller.EnumerateUSB('')" to get all PI controller connected to you PC. Or look at the label of the case of your controller
+    controllerSerialNumber = '0119017815';    % Use "devicesUsb = Controller.EnumerateUSB('')" to get all PI controller connected to you PC. Or look at the label of the case of your controller
     PIdevice = Controller.ConnectUSB ( controllerSerialNumber );
 
 %     % TCP/IP
@@ -54,8 +54,9 @@ availableAxes = PIdevice.qSAI_ALL;
 % get Name of the stage connected to axis 1
 % PIdevice.qCST ( '1' )
 % Get name of stage connected to axis queried before
-fprintf('-- Stage [axis=type]: %s\n', PIdevice.qCST(availableAxes));
-
+for iii = 1:length(availableAxes)
+    fprintf('-- Stage [axis=type]: %s\n', PIdevice.qCST(char(availableAxes(iii))));
+end
 
 % UNEEDED: Show for all axes: which stage is connected to which axis
 % for idx = 1 : 1%length ( availableAxes )
@@ -70,6 +71,6 @@ fprintf('-- Stage [axis=type]: %s\n', PIdevice.qCST(availableAxes));
 % - Use function "PI_ChangeConnectedStage"
 
 % Define axis variable for single (first) axis in list
-axis = availableAxes(1);
+axis = availableAxes;
 
-clear availableAxes boolPIdeviceConnected controllerSerialNumber
+clear availableAxes boolPIdeviceConnected controllerSerialNumber iii
