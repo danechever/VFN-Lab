@@ -41,43 +41,45 @@ clear all
 %% General settings 
 
 % Directory for saving data:
-svFld = 'C:\Users\AOlab1\Desktop\DE2\VFN\PupilVFNCoupling\051519_VPL4';
+svFld = 'C:\Users\AOlab1\Desktop\DE2\VFN\PupilVFNCoupling\020620_FLE7';
 
-% Experiment name for figures
-expNm = '9Don_780NullCheck2';
+% Experiment name for figures. If the first number is single digit,
+expNm = '6Don_780VarVortScan2'; % please pad with zero, ex. 01Don_
+message = 'Check full donut coupling before another vortex scan.';
 
 %~~ ZABER STUFF 
 % Flag to enable zaber motion (including centering)
 isZab = true;   % Should be true if fiber focus scan is desired
 isVortScan = false;
 
-% Vortex center of scan properties [in mm]
-VXcenter = 12.184500;      % Value when PM stage was added: 12.271445mm
-VYcenter = 13.164000;  %!! must be >13.134083-0.8
-Vbacklash= 0.005;           %Note: this is also used for fiber z-axis
+% Vortex center of scan properties [in mm] %11.963700 in, 17.485000 out
+VXcenter = 12.016700;      % Value when PM stage was added: 12.271445mm
+VYcenter = 12.895000;  %!! must be >12.334083
+%VYcenter 12.880000 in, 17.500000 out
+Vbacklash= 0.005;          % Note: this is also used for fiber z-axis
 
 % Vortex scan properties
 %To include center values as a point in scan; use ODD number of points
 % !!! THIS IS VY !!!
-VYpoints = 5;% Number of Y points in scan
+VYpoints = 3;% Number of Y points in scan
 % !!! THIS IS VX !!!
 VXpoints = VYpoints; % Number of X points in scan
 
 % Vortex step params in [mm]  
-vStepRange = min(0.03,0.8);   %Vortex will be scanned +/- this value
+vStepRange = min(0.015,0.8);   %Vortex will be scanned +/- this value
                     % ie. scan will be: 
                     % [VXcen-vStepRa to VXcen+vStepRa] w/ Vxpoi steps
-                    
+
 % Fiber Focus Scan properties
-Zcenter = 3.640500;     % Focus (Z) center point
-Zpoints = 4;            % Number of focci taken
-ZStepSize = 0.003;      % Step size in mm
+Zcenter = 1.743000;     % Focus (Z) center point %% Change by BC from 3.008700
+Zpoints = 1;            % Number of focci taken
+ZStepSize = 0.007;      % Step size in mm
 %~~ END ZABER STUFF 
 
 %~~ PIEZO STUFF 
 % Fiber center of scan in Volts
-Xcenter = 30.50;
-Ycenter = 35.60;
+Xcenter = 80.00; % clockwise moves the center to the left
+Ycenter = 81.00; % clockwise moves the center down
 
 % Fiber scan properties
 %To include center values as a point in scan; use EVEN number of points
@@ -85,7 +87,7 @@ Xpoints = 50;% number of X points in scan (actual scan will have +1)
 Ypoints = Xpoints; % Ycenter/Xcenter will be an extra point in the middle
 
 % Fiber step sizes in Volts
-refStep   = 4; % refStep is the step size for a full PSF with a 10*10 grid
+refStep   = 12; % refStep is the step size for a full PSF with a 10*10 grid
 StepSize  = refStep/(Xpoints/10);
 backlash  = 10; % Kept backlash in to see if it did anything
 %~~ END PIEZO STUFF 
@@ -105,19 +107,59 @@ Delay = 0.1;
 fprintf('Delay in use: %0.1f\n', Delay)
 %~~ END FEMTO POWER METER STUFF 
 
+%~~ FEMTO NORMALIZATION STUFF
+isMMFNorm = false;
+%~~ END FEMTO NORMALIZATION
+
 %~~ RED (NORM) POWER METER STUFF 
 pmNread = 100;      % Number of samples to take
-isPMNorm = false;   % Flag to mark whether this PM should be read
+isPMNorm = true;   % Flag to mark whether this PM should be read
                         % This flag is useful in case the PM is not in the
                         % system. -9999 will replace the pmRead values.
 pmNormReport = 44.1;   % @635nm typ = 14.08; @780nm typ = 44.1
                         % Valu for fibertip power when isPMNorm=false. Only
                         % affects the printed values at end; NORM'd cube
                         % values are still un-normed. SET =1 to not norm
-                        % the printed values.
+                       % the printed values.
 pmCalWvl = 780; % Wavelength for redPM for normalization
                         
 %~~ END RED (NORM) POWER METER STUFF
+%% DataNotes automation pt1
+% Write the filename
+datName = strcat('\DataNotes.txt');
+datFl = strcat(svFld, datName);
+fileID = fopen(datFl, 'a');
+fprintf(fileID, '- %s\r\n', expNm);
+
+% General comment
+ fprintf(fileID, '    %s\r\n', message);
+fprintf(fileID, '    * Trying to improve planet coupling on varia.\r\n');
+
+% Scan Params section
+fprintf(fileID, '    Scan params:\r\n');
+fprintf(fileID, '        isZab:         %s\r\n', mat2str(isZab));
+fprintf(fileID, '        isVortScan:    %s\r\n', mat2str(isVortScan));%    
+trash = [VXcenter; VYcenter];
+fprintf(fileID, '        Vortex pos:    x = %9.6fmm    y = %9.6fmm\r\n', trash);
+fprintf(fileID, '        Vbacklash:     %5.3fmm\r\n', Vbacklash); 
+trash = [VYpoints; VXpoints; vStepRange];
+fprintf(fileID, '        v scan param:  vYpoi = %d, vXpoi = %d, vStepRange = %4.2f\r\n', trash);
+fprintf(fileID, '        Laser power:   Varia 780nm, 80%% power, 3nm BW.\r\n');
+fprintf(fileID, '        Optical Filt:  600nm Longpass\r\n');
+fprintf(fileID, '        Vortex Mask:   JPL Poly 550nm Charge 2\r\n');
+trash = [Xcenter; Ycenter; Zcenter];
+fprintf(fileID, '        scan center    (%5.2f V,%6.2f V, %8.6f mm)\r\n', trash);
+trash = [Xpoints; Zpoints; refStep; refStep; Xpoints; ZStepSize];
+fprintf(fileID, '        Scan params:   xpoi = %d, zpoi = %d, refStep = %d, stepsize = %d/(%d/10); zstep = %4.2f mm\r\n', trash);
+fprintf(fileID, '        isAutoScale:   %s\r\n', mat2str(isAutoScale));
+trash = [FMTO_scale; Nread; Nrate];
+fprintf(fileID, '        Femto:         FMTO_scale = %d; Nread = %d; Nrate = %d\r\n', trash);
+trash = [pmNormReport; pmCalWvl];
+fprintf(fileID, '        redPM norm:    isPMNorm = %s; pmNormReport = %5.2f; pmCalWavelength = %dnm\r\n', mat2str(isPMNorm), trash);
+fprintf(fileID, '        isMMFNorm: %s\r\n\r\n', mat2str(isMMFNorm));
+fclose(fileID);
+
+%~~ END DataNotes pt1 automation
 %% Zaber Setup
 if isVortScan && ~isZab
     error('isVortScan is true but vortex motion is disabled with isZab')
@@ -175,7 +217,7 @@ VFN_setUpFMTO;
 %    % Modify gain accordingly
 %    [FMTO_scale, s] = VFN_FMTO_setAutoGain(s, readVal, FMTO_scale);
 %else
-    s = VFN_FMTO_setGain(s, FMTO_scale);
+    VFN_FMTO_LUCI_setGain(FMTO_scale);
 %end
 
 fprintf('Current Gain setting: %i\n', FMTO_scale)
@@ -307,7 +349,7 @@ for a = 1:length(distVX)
                         % Save old read value for comparison after autoGain
                         old_read = mean(read);
                         % Modify gain accordingly
-                        [FMTO_scale, s] = VFN_FMTO_setAutoGain(s, old_read, FMTO_scale);
+                        [FMTO_scale, s] = VFN_FMTO_LUCI_setAutoGain(s, old_read, FMTO_scale);
                         % Check if re-read is needed
                         if old_scale ~= FMTO_scale
                             % FMTO_scale changed so the gain changed
@@ -392,27 +434,85 @@ end
 if isPMNorm
     %-- Actually read from red PM when flag is set. 
     % Wait for PM value to settle
-    pause(1);
+    pause(2);
 
     % Take measurements of the power
     pmRead = nan(pmNread,1);
     for ii = 1:pmNread
         pmRead(ii)=str2num(query(obj1, 'measure:power?'));
     end
+    % Account for ~0.02 loss from fiber lens
+        % 3.4% reflection spec at 780nm, 0.3% reflection measured at 635nm
+    pmRead1 = mean(pmRead(:))*(1-0.034);%0.997;    % Updated on 2/8/19 based on 10/26/18
 else
     %-- Set pmRead to -9999 if PM is not to be read
     pmRead = ones(pmNread,1)*-9999;
 end
+
+if isMMFNorm
+    disp('Switch fibers. Press any key to continue')
+    %%%% When this becomes automated, this will become a PI command
+    %%%% rather than a manual switch CHANGE_MARK
+    pause;
+    %Now the MMF should be in the beam and can collect all the light
+    %Use the femto to collect the total power, same as collecting data
+    mmf_read    = startForeground(s);
+    if isAutoScale
+        % Save old FMTO_scale for comparison after autoGain
+        old_scale = FMTO_scale;
+        % Save old read value for comparison after autoGain
+        old_read = mean(mmf_read);
+        % Modify gain accordingly
+        [FMTO_scale, s] = VFN_FMTO_LUCI_setAutoGain(s, old_read, FMTO_scale);
+        % Check if re-read is needed
+        if old_scale ~= FMTO_scale
+            % FMTO_scale changed so the gain changed
+            fprintf('Femto gain was changed from %i to %i\n',old_scale, FMTO_scale)
+            mmf_read    = startForeground(s);
+            %ratio   = ratio * (old_read/mean(read));
+            if FMTO_scale > 9
+                warning('Gain >9: %i',FMTO_scale)
+            end
+        end
+    end
+    if find(mmf_read>10)
+        warning('Power is too high')
+    end
     
-% Account for ~0.02 loss from fiber lens
-pmRead1 = mean(pmRead(:))*0.997;    % Updated on 2/8/19 based on 10/26/18
+    %store the relevant values in the same manner as before
+    scl1 = FMTO_scale;
+    scl2 = gnFact^-(FMTO_scale-6);
+    switch FMTO_scale
+        case 5
+            locBias = 0.004905;%0.0033887;
+        case 6
+            locBias = 0.005382;%0.0042960;
+        case 7
+            locBias = 0.005405;%0.0044690;
+        case 8
+            locBias = 0.005350;%0.0047430;
+        case 9
+            locBias = 0.004941;%0.0068927;
+        case 10
+            locBias = -0.001120;
+        case 11
+            locBias = -0.059031;
+        otherwise
+            warning('No bias forFMTO_scale = %i\n',FMTO_scale)
+            locBias = nan;
+    end
+    scl3 = locBias;
+    mmf_norm = mmf_read-locBias;
+    pmRead = mmf_norm;
+end
 
 
 %% close the connections to all devices
 % Set Femto back to 10^6 
 FMTO_scale = 6;
-s = VFN_FMTO_setGain(s, FMTO_scale);
+VFN_FMTO_LUCI_setGain(FMTO_scale);
 fprintf('\n Femto Gain set to %i',FMTO_scale);
+VFN_cleanUpFMTO;
 
 %Set all three axes to starting position
 DE2_MDTVol(MDT, Xcenter-backlash, 'x', 0); %xC holds current xVoltage
@@ -427,20 +527,21 @@ delete(MDT);
 clear MDT;
 
 if isZab
-    %-- Return vortex to center position
-    VFN_Zab_move(vortX, VXcenter-Vbacklash);
-    fprintf('\nVortX pos: %f',VFN_Zab_move(vortX, VXcenter));
-    VFN_Zab_move(vortY, VYcenter-Vbacklash);
-    fprintf('  Vort Y pos: %f',VFN_Zab_move(vortY, VYcenter));
     
     if isPMNorm
         %-- Move Calibration PM out of the beam
         fprintf('  |  PM Zab pos: %f\n', VFN_Zab_move(pmX, 25));
     else
         fprintf('\n');  % terminate line from vortex recentering
-        %-- Move fiber back to Zcenter
-        VFN_Zab_move(fibZ, Zcenter-Vbacklash);
-        VFN_Zab_move(fibZ, Zcenter);
+        
+    %-- Return vortex to center position
+    VFN_Zab_move(vortX, VXcenter-Vbacklash);
+    fprintf('\nVortX pos: %f',VFN_Zab_move(vortX, VXcenter));
+    VFN_Zab_move(vortY, VYcenter-Vbacklash);
+    fprintf('  Vort Y pos: %f',VFN_Zab_move(vortY, VYcenter));
+    %-- Move fiber back to Zcenter
+    VFN_Zab_move(fibZ, Zcenter-Vbacklash);
+    VFN_Zab_move(fibZ, Zcenter);
     end
         
     %-- Clean up
@@ -485,6 +586,12 @@ else
     %-- When PM was not read, set normalization value to 1
     pmRead1 = 1;
 end
+
+if isMMFNorm
+    pmRead1 = mean(mmf_norm).*scl2;
+    %fmtoSnsScl = VFN_getFmtoResponsivity(pmCalWvl);
+    %pmRead1 = pmRead1*fmtoSnsScl; 
+end
 % Create the matrix and normalize by total power on fib tip
 measScl2 = measScl/pmRead1;
 
@@ -523,7 +630,7 @@ end
 
 %% focus test
 % If you wanna find the focus, do the normal test with the following
-% section uncommanted. This section will creat a plot of the max power
+% section uncommented. This section will create a plot of the max power
 % found in each image to see where you are closer from the focus
 % for k = 1:Zpoints
 %     maxVals(k) = max(max(meas(:,:,k)));
@@ -618,8 +725,11 @@ fits.writeKey(fitmap, 'SRCube ', SRCubeNm(ind(end-1)+1:end));
 ind = strfind(NormCubeNm ,'\');
 fits.writeKey(fitmap, 'NormCube ', NormCubeNm(ind(end-1)+1:end));
 fits.writeKey(fitmap, 'NormFlag', logical(isPMNorm));
+fits.writeKey(fitmap, 'MMFFlag', logical(isMMFNorm));
 fits.writeKey(fitmap, 'NormMean', mean(pmRead));
 fits.writeKey(fitmap, 'NormSTD', std(pmRead));
+fits.writeKey(fitmap, 'MMFMean', mean(pmRead));
+fits.writeKey(fitmap, 'MMFSTD', std(pmRead));
 fits.writeKey(fitmap, 'NormWvl', pmCalWvl);
 fits.writeKey(fitmap, 'NormScl', fmtoSnsScl);
 fits.writeKey(fitmap, 'CNTRLCD', 'PZScan_ZabFoc');
@@ -675,8 +785,11 @@ fits.writeKey(fitmap, 'NAX4', 'Focus');
 fits.writeKey(fitmap, 'NAX5', 'XVortexCoord');
 fits.writeKey(fitmap, 'NAX6', 'YVortexCoord');
 fits.writeKey(fitmap, 'NormFlag', logical(isPMNorm));
+fits.writeKey(fitmap, 'MFFlag', logical(isMMFNorm));
 fits.writeKey(fitmap, 'NormMean', mean(pmRead));
 fits.writeKey(fitmap, 'NormSTD', std(pmRead));
+fits.writeKey(fitmap, 'MMFMean', mean(pmRead));
+fits.writeKey(fitmap, 'MMFSTD', std(pmRead));
 
 fits.setCompressionType(fitmap,'NOCOMPRESS');
 fits.writeImg(fitmap,permute(measScl2,permOrd));
@@ -687,13 +800,14 @@ fits.closeFile(fitmap);
 %% Report results
 
 %-- Use user-provided norm value if desired
-if ~isPMNorm
+if ~(isPMNorm || isMMFNorm)
     pmRead1 = pmNormReport;
 end
 
 % Take average of all the Nread
 meas1 = measScl;
 % Crop the matrix to middle (cropVal-2)/cropVal region to be in donut null for min
+%eta_4a, ind4a = VFN_An_GetEta_s(meas1)
 cropVal = 7;
 xmin = max(floor(length(distX)/cropVal),1);
 ymin = max(floor(length(distY)/cropVal),1);
@@ -713,7 +827,7 @@ fprintf(['\n Min Location: ', ...
          '\n  VX ind  = %3i, VX  =  %0.6f mm', ...
          '\n  VY ind  = %3i, VY  =  %0.6f mm'], ...
          I1+xmin-1, distX(I1+xmin-1), I2+ymin-1, distY(I2+ymin-1), ...
-         I4, distZ(I4), I5, distVX(I5), I6, distVY(I6));
+         I4, distZ(I4), I5, distVX(I5), I6, distVY(I6)); %ind41(2), (1), (4)...
 
 
 %Take overall max
@@ -731,21 +845,32 @@ mxVal = max(meas3(:));
 fprintf('\nMax in min Frame:        %f', mxVal)
 fprintf('\nMax/Min, min Frame-dark: %f', mxVal/mnVal)
 %fprintf('\nMax/Min ratio-dark:      %f\n', (mxVal-0.005)/(mnVal-0.005))
-if ~isPMNorm
+if ~(isPMNorm || isMMFNorm)
     fprintf('\nWARN: redPM not used; fib tip power provided by user');
 end
+eta_s = mnVal/pmRead1;
+eta_p = mxVal/pmRead1;
 fprintf('\nPower on Fiber tip:      %f', pmRead1);
-fprintf('\nMin, PM normed (eta_s):  %f', mnVal/pmRead1);
-fprintf('\nMax, PM normed (eta_p):  %f\n', mxVal/pmRead1);
+fprintf('\nMin, PM normed (eta_s):  %f', eta_s);
+fprintf('\nMax, PM normed (eta_p):  %f\n', eta_p);
 
 if ~sum(strfind(expNm, 'PSF'))
     % Assume we are analyzing a donut
-    if ~isPMNorm
+    if ~(isPMNorm || isMMFNorm)
         fprintf('\n      WARN: redPM not used; fib tip power provided by user');
     end
-    fprintf('\n      - Ratio in Frame = (%f/%f) - bias corr.------> = %0.2f\n', mxVal, mnVal, mxVal/mnVal)
-    fprintf('      - Eta_s = (%f/%f) w/ approx vals for thrpt -> = %f\n', mnVal, pmRead1, mnVal/pmRead1)
-    fprintf('      - Eta_p = (%f/%f) w/ approx vals for thrpt -> = %f\n', mxVal, pmRead1, mxVal/pmRead1)
+    fprintf('\n      - Rel. Int. Time = (%f ^2/%f) - bias corr.------> = %0.2f\n', eta_p, eta_s, eta_p*eta_p/eta_s)
+    fprintf('      - Ratio in Frame = (%f/%f) - bias corr.------> = %0.2f\n', mxVal, mnVal, eta_p/eta_s)
+    fprintf('      - Eta_s = (%f/%f) w/ approx vals for thrpt -> = %f\n', mnVal, pmRead1, eta_s)
+    fprintf('      - Eta_p = (%f/%f) w/ approx vals for thrpt -> = %f\n', mxVal, pmRead1, eta_p)
+    
+    %Automated DataNotes
+    fileID = fopen(datFl, 'a');
+    fprintf(fileID, '\n         - Rel. Int. Time = (%f ^2/%f) - bias corr.------> = %0.2f\n', eta_p, eta_s, eta_p*eta_p/eta_s);
+    fprintf(fileID, '         - Ratio in Frame = (%f/%f) - bias corr.------> = %0.2f\n', mxVal, mnVal, eta_p/eta_s);
+    fprintf(fileID, '         - Eta_s = (%f/%f) w/ approx vals for thrpt -> = %f\n', mnVal, pmRead1, eta_s);
+    fprintf(fileID, '         - Eta_p = (%f/%f) w/ approx vals for thrpt -> = %f\n\n', mxVal, pmRead1, eta_p);
+    fclose(fileID);
 else
     % Analysing the PSF
     fprintf(['\n Max Location: ', ...
@@ -756,12 +881,18 @@ else
         '\n  VY ind  = %3i, VY  =  %0.6f mm'], ...
         mxI1, distX(mxI1), mxI2, distY(mxI2), ...
         mxI4, distZ(mxI4), mxI5, distVX(mxI5), mxI6, distVY(mxI6));
-    if ~isPMNorm
+    if ~(isPMNorm || isMMFNorm)
         fprintf('\n      WARN: redPM not used; fib tip power provided by user');
     end
     fprintf('\n      - Max:                        %f', mxVal2)
     fprintf('\n      - Power on Fiber tip:         %f',pmRead1)
     fprintf('\n      - Max, PM normed (coupling):  %f\n',mxVal2/pmRead1)
+    % Automated DataNotes
+    fileID = fopen(datFl, 'a');
+    fprintf(fileID, '\r\n         - Max:                        %f', mxVal2);
+    fprintf(fileID, '\r\n         - Power on Fiber tip:         %f',pmRead1);
+    fprintf(fileID, '\r\n         - Max, PM normed (coupling):  %f\r\n\r\n',mxVal2/pmRead1);
+    fclose(fileID);
     % Display max in each frame of focus
     tmp1 = nan(size(measScl,4),1);
     for iii = 1:size(measScl, 4)

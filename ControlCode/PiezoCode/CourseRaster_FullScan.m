@@ -41,7 +41,7 @@ for j=1:length(distX)
         % Save old read value for comparison after autoGain
         old_read = mean(read);
         % Modify gain accordingly
-        [FMTO_scale, s] = VFN_FMTO_setAutoGain(s, old_read, FMTO_scale);
+        [FMTO_scale, s] = VFN_FMTO_LUCI_setAutoGain(s, old_read, FMTO_scale);
         % Check if re-read is needed
         if old_scale ~= FMTO_scale
             % FMTO_scale changed so the gain changed

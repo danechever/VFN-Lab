@@ -34,45 +34,49 @@ global s FMTO_scale
 
 %% Parameters to change
 % Directory for saving data:
-svFld = 'C:\Users\AOlab1\Desktop\DE2\VFN\PupilVFNCoupling\071019_VAR1';
+svFld = 'C:\Users\AOlab1\Desktop\DE2\VFN\PupilVFNCoupling\020520_FLE6';
 
 % Experiment name for figures
-expNm = '126WLS_Var620TO820Dat2';
+expNm = '5WLS_Var755805NullCheck1';
+message = 'Check null depth at various wavelengths with current system params.';
 % Figures being created
 etaSPlot = true;
 etaPPlot = true;
 
 % Wavelength centers being scanned
-WLPoints = 11;
+WLPoints = 5;
 % Minimum WL and Maximum WL being scanned [Min,Max]
-WLMinMax = [620,820];
+WLMinMax = [755,805];
 
 %Highest Bandwidth
 MaxBW = 3;
 %Number of points being scanned
 ScanPoi = 1;
 %Varia power values for normalization (these should be the 'raw' values, so no femto responsivity factor)
-VarPow = [0.24627; 0.28487; 0.37218; 0.34387; 0.43660; 0.58485; 0.97818; 1.17677; 2.75001; 2.40778; 3.13616];
-
+VarPow = [ 0.08996; 0.25004; 0.40561; 0.16661; 0.15985];
+%For 790nm VarPow = [23.60209 42.40228 55.91581 67.03991 77.09343 84.71259 93.21918 98.27705 102.61063 106.61146];
 
 %-- General Varia Settings
 varPWR = 80;
 varEMS = true;
 
 %-- Fiber Scan settings
-xCenter = 75;
-yCenter = 85;
-zCenter = 3.700;
+xCenter = 76.00;
+yCenter = 87.00;
+zCenter = 1.73700;
 backlash  = 10; 
-xPoints = 70;
+xPoints = 30;
 yPoints = xPoints;
+VXcenter = 12.011700; 
+VYcenter = 12.860000;
+Vbacklash = .005;
 % NOTE: code assumes null is min in image so refStep and centering should
   % be s.t. this is true.
-refStep = 13;
+refStep = 5;
 
-%-- Focus settings
-isAutoFocus = true;   %if true, changes focus during wavelength scan in linear fashion
-focusRange = [3.757 3.683];
+%-- Focus settings %1.742 for 750nm %1.702 for 830
+isAutoFocus = false && length(WLCenters)>1;   %if true, changes focus during wavelength scan in linear fashion
+focusRange = [1.737 1.737]; %Optimal focus goes as focusRange(1) with WLMinMax(1)
 
 %isAutoScale = true; % If false, the gain is held fixed. Else, gain
                         % is set automatically using FMTO_setAutoGain()
@@ -80,6 +84,39 @@ FMTO_scale = 6;     % Starting gain. the n in: 10^n for the gain setting
 Nread   = 100;      % power samples at a given locaiton
 Nrate   = 1000;     % rate of scan [samples/second]
 
+%% DataNotes automation pt1
+% Write the filename
+datName = strcat('\DataNotes.txt');
+datFl = strcat(svFld, datName);
+fileID = fopen(datFl, 'a');
+fprintf(fileID, '- %s\r\n', expNm);
+
+% General comment
+ fprintf(fileID, '     %s\r\n', message);
+fprintf(fileID, '    * Acquire the new rough data for Spirit of Lyot.\r\n');
+
+% Scan Params section
+fprintf(fileID, '    Scan params:\r\n');  
+trash = [VXcenter; VYcenter];
+fprintf(fileID, '        Vortex pos:    x = %9.6fmm    y = %9.6fmm\r\n', trash);
+fprintf(fileID, '        Vbacklash:     %5.3fmm\r\n', Vbacklash); 
+trash = [varPWR, mean(WLMinMax), MaxBW/ScanPoi, MaxBW];
+fprintf(fileID, '        Laser power:   Varia: %d pct power, %6.4fnm center, %3.1fnm-%dnm bandwidth\r\n', trash);
+fprintf(fileID, '        Optical Filt:  600nm Longpass \r\n');
+fprintf(fileID, '        Vortex Mask:   JPL Poly 550nm Charge 2\r\n');
+trash = [xCenter; yCenter; zCenter];
+fprintf(fileID, '        scan center    (%5.2f V,%6.2f V, %8.6f mm)\r\n', trash);
+trash = [xPoints; 1; refStep; refStep; xPoints; 1];
+fprintf(fileID, '        Scan params:   xpoi = %d, zpoi = %d, refStep = %d, stepsize = %d/(%d/10); zstep = %4.2f mm\r\n', trash);
+fprintf(fileID, '        isAutoScale:   %s\r\n', mat2str(true));
+trash = [FMTO_scale; Nread; Nrate];
+fprintf(fileID, '        Femto:         FMTO_scale = %d; Nread = %d; Nrate = %d\r\n', trash);
+% trash = [pmNormReport; pmCalWvl];
+% fprintf(fileID, '        redPM norm:    isPMNorm = %s; pmNormReport = %5.2f; pmCalWavelength = %dnm\r\n\r\n', mat2str(isPMNorm), trash);
+
+fclose(fileID);
+
+%~~ END DataNotes pt1 automation
 %% Initialize Varia
 % Connect and instantiate NKT
 VFN_setUpNKT;
@@ -126,7 +163,7 @@ gnFact  = 9.97;
 % Setup Femto 
 VFN_setUpFMTO;  
 
-s = VFN_FMTO_setGain(s, FMTO_scale);
+VFN_FMTO_LUCI_setGain(FMTO_scale);
 
 fprintf('Current Gain setting: %i\n', FMTO_scale)
 %% Main loop
@@ -205,8 +242,8 @@ VFN_cleanUpNKT;
 
 % Set Femto back to 10^6 
 FMTO_scale = 6;
-s = VFN_FMTO_setGain(s, FMTO_scale);
-fprintf('\n Femto Gain set to %i',FMTO_scale);
+VFN_FMTO_LUCI_setGain(FMTO_scale);
+fprintf('\n Femto Gain set to %i\n',FMTO_scale);
 
 %Set all three axes to starting position
 DE2_MDTVol(MDT, xCenter-backlash, 'x', 0); %xC holds current xVoltage
@@ -216,7 +253,7 @@ DE2_MDTVol(MDT, yCenter, 'y', 0); %yC holds current yVoltage
 % DE2_MDTVol(MDT, Zcenter-backlash, 'z', 0); %zC holds current zVoltage
 % DE2_MDTVol(MDT, Zcenter, 'z', 0); %zC holds current zVoltage
 
-if isAutoFocus
+%if isAutoFocus %Change by BC: isAutoFocus isn't checked to init zabs
     %-- Clean up
     VFN_cleanUpZabers;
     if exist('vortX', 'var')
@@ -228,7 +265,7 @@ if isAutoFocus
     if exist('fibZ', 'var')
         clear fibZ
     end
-end
+%end
 fclose(MDT);
 delete(MDT);
 clear MDT;
@@ -349,7 +386,7 @@ if(length(BWs)>1)
         fprintf('\n        WvlCenter: %3dnm\n',WLCenters(j))
         for i = 1:length(BWs)
             if size(VarPow) == size(dat2D(:,:,1,1)) 
-                fprintf('        BW: %2dnm, Null = %f, Coupling = %f\n',BWs(i), eta_s(j,i),eta_p(j,i))
+                fprintf('        BW: %2dnm, Null = %f, Coupling = %f\n',BWs(i), dat(j,i)/VarPow(j,i),datmax(j,i)/VarPow(j,i))
             else
                 fprintf('        BW: %2dnm, Null (Unnorm) = %f, Coupling (Unnorm) = %f\n',BWs(i), dat(j,i), datmax(j,i))
             end
@@ -358,7 +395,7 @@ if(length(BWs)>1)
 else
     fprintf('\n        BW: %2dnm\n',BWs(1))
     for j = 1:length(WLCenters)
-        fprintf('        WvlCenter: %3dnm, Null = %f, Coupling = %f\n',WLCenters(j), eta_s(j,1), eta_p(j,1))
+        fprintf('        WvlCenter: %3dnm, Null = %f, Coupling = %f\n',WLCenters(j), dat(j,i)/VarPow(j,i),datmax(j,i)/VarPow(j,i))
     end
 end
 

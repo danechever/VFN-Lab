@@ -25,6 +25,7 @@ plot(pmPos, mean(pmReads,2))
 
 % Calculate beam size:
 pmVals = mean(pmReads,2);
+pmErr = std(transpose(pmReads));
 pmDev = gradient(gradient(pmVals));
 [valMax, indMax] = max(pmDev(:));
 [valMin, indMin] = min(pmDev(:));
@@ -36,3 +37,10 @@ plot(pmPos, pmDev)
 flnm = 'C:\Users\AOlab1\Desktop\DE2\VFN\PupilVFNCoupling\021919_FNM3\BeamDiam';
 
 save(flnm, 'pmPos', 'pmReads')
+
+datFl = strcat(flnm, 'data.txt');
+fileID = fopen(datFl, 'w');
+for jj = 1:posPts
+    fprintf(fileID, '%6.4f %8.6e %8.6e\n', pmPos(jj), pmVals(jj), pmErr(jj));
+end
+fclose(fileID);

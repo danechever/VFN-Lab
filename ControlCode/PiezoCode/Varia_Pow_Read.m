@@ -28,7 +28,7 @@
 % window, the Normalization values with the red pm to femto conversion and
 % one without - the matrix without the conversion can be copied directly into the
 % normalization matrix of the WavelengthScan.m to conduct a scan
-
+addpath(genpath('C:\Users\AOlab1\Desktop\DE2\VFN\VFN-Lab\ControlCode'));
 
 %% Scan Parameters
 % Wavelength centers being scanned
@@ -45,7 +45,28 @@ varPWR = 80;
 varEMS = true;
 
 % isPMNorm initiates and uses actuator for power meter
-isPMNorm = true;
+%Number of values being averaged
+pmNread = 100;
+isPMNorm = true; 
+isVortScan = false;
+isZab = true;
+
+% isMMFNorm indicates the use of a multimode fiber
+%~~ FEMTO POWER METER STUFF 
+isMMFNorm = false;
+isAutoScale = true; % If false, the gain is held fixed. Else, gain
+                        % is set automatically using FMTO_setAutoGain()
+FMTO_scale = 6;     % Starting gain. the n in: 10^n for the gain setting
+Nread   = 100;      % power samples at a given locaiton
+Nrate   = 1000;     % rate of scan [samples/second]
+% Add delay for settling time of detector
+% NOTE::: Chose arbitrary delay values for now
+delLookUp   = [[5 1]; [1 0.5]; [0 0.3]];  % Look-up table for delay values
+delInd      = find(delLookUp<=StepSize,1);  % index of delay to use
+Delay       =delLookUp(delInd,2); 
+Delay = 0.1;
+fprintf('Delay in use: %0.1f\n', Delay)
+%~~ END FEMTO POWER METER STUFF 
 
 %% Initialize Varia
 % Connect and instantiate NKT
@@ -72,14 +93,31 @@ else
 end
 % Connect to instrument object, obj1.
 fopen(obj1);
-%% Zaber Setup
-if isVortScan && ~isZab
-    error('isVortScan is true but vortex motion is disabled with isZab')
-end
+%% Femto setup
+% Define the gain to apply for scaling. Uses same gain for all: gnFact^(FMTO_scale-6)
+gnFact  = 9.97;
 
-if (Zpoints > 1) && ~isZab
-    error('Fiber scan is desired but zaber motion is disabled with isZab')
-end
+% Setup Femto 
+VFN_setUpFMTO;  
+
+%if isAutoScale
+%    % Take a sample reading at current power
+%    readVal = mean(startForeground(s));
+%    % Modify gain accordingly
+%    [FMTO_scale, s] = VFN_FMTO_setAutoGain(s, readVal, FMTO_scale);
+%else
+    VFN_FMTO_LUCI_setGain(FMTO_scale);
+%end
+
+fprintf('Current Gain setting: %i\n', FMTO_scale)
+%% Zaber Setup
+% if isVortScan && ~isZab
+%     error('isVortScan is true but vortex motion is disabled with isZab')
+% end
+% 
+% if (Zpoints > 1) && ~isZab
+%     error('Fiber scan is desired but zaber motion is disabled with isZab')
+% end
 
 if isZab
     VFN_setUpZabers; % Instantiate the zabers
@@ -115,7 +153,7 @@ pmRead = nan(pmNread,1);
 for ii = 1:pmNread
     pmRead(ii)=str2num(query(obj1, 'measure:power?'));
 end
-if(mean(pmRead) < 5e-9 || isPMNorm == false)
+if(mean(pmRead) < 5e-8 && isPMNorm == true)
     % Move pm into beam
     VFN_Zab_move(pmX, 0);
     %Number of values being averaged
@@ -154,6 +192,66 @@ if(mean(pmRead) < 5e-9 || isPMNorm == false)
         end
     end
     disp(readVals')
+elseif(mean(pmRead) < 5e-8 && isMMFNorm == true)
+    %%%% CHANGE_MARK make it to read the values at the different
+    %%%% wavelengths and bandwidths
+    disp('Switch fibers. Press any key to continue')
+    %%%% When this becomes automated, this will become a PI command
+    %%%% rather than a manual switch CHANGE_MARK
+    pause;
+    %Now the MMF should be in the beam and can collect all the light
+    %Use the femto to collect the total power, same as collecting data
+    mmf_read    = startForeground(s);
+    if isAutoScale
+        % Save old FMTO_scale for comparison after autoGain
+        old_scale = FMTO_scale;
+        % Save old read value for comparison after autoGain
+        old_read = mean(mmf_read);
+        % Modify gain accordingly
+        [FMTO_scale, s] = VFN_FMTO_LUCI_setAutoGain(s, old_read, FMTO_scale);
+        % Check if re-read is needed
+        if old_scale ~= FMTO_scale
+            % FMTO_scale changed so the gain changed
+            fprintf('Femto gain was changed from %i to %i\n',old_scale, FMTO_scale)
+            mmf_read    = startForeground(s);
+            %ratio   = ratio * (old_read/mean(read));
+            if FMTO_scale > 9
+                warning('Gain >9: %i',FMTO_scale)
+            end
+        end
+    end
+    if find(mmf_read>10)
+        warning('Power is too high')
+    end
+    
+    %store the relevant values in the same manner as before
+    scl1 = FMTO_scale;
+    scl2 = gnFact^-(FMTO_scale-6);
+    switch FMTO_scale
+        case 5
+            locBias = 0.004905;%0.0033887;
+        case 6
+            locBias = 0.005382;%0.0042960;
+        case 7
+            locBias = 0.005405;%0.0044690;
+        case 8
+            locBias = 0.005350;%0.0047430;
+        case 9
+            locBias = 0.004941;%0.0068927;
+        case 10
+            locBias = -0.001120;
+        case 11
+            locBias = -0.059031;
+        otherwise
+            warning('No bias forFMTO_scale = %i\n',FMTO_scale)
+            locBias = nan;
+    end
+    scl3 = locBias;
+    mmf_norm = mmf_read-locBias;
+    pmRead = mmf_norm;
+    pmRead1 = mean(mmf_norm).*scl2;
+    fmtoSnsScl = VFN_getFmtoResponsivity(pmCalWvl);
+    % Everything copy/pasted-- try to get rid of extra stuff CHANGE_MARK
 else
     error('Room lights are on');
 end
@@ -183,6 +281,7 @@ for i = 1:BWPoints
     fprintf(' %2.5f', rawRead(WLPoints,i));
 end
 fprintf(']\n');
+
 %% Clean up NKT
 VFN_cleanUpNKT;
 %% Close redPM connection
@@ -220,3 +319,9 @@ if isPMNorm
         clear pmX
     end
 end
+
+%% Clean up FMTO
+FMTO_scale = 6;
+VFN_FMTO_LUCI_setGain(FMTO_scale);
+fprintf('\n Femto Gain set to %i',FMTO_scale);
+VFN_cleanUpFMTO;

@@ -20,7 +20,7 @@ VFN_setUpFMTO;
 %    % Modify gain accordingly
 %    [FMTO_scale, s] = VFN_FMTO_setAutoGain(s, readVal, FMTO_scale);
 %else
-    s = VFN_FMTO_setGain(s, FMTO_scale);
+    VFN_FMTO_LUCI_setGain(FMTO_scale);
 %end
 
 fprintf('Delay in use: %0.1f\n', Delay)
@@ -39,7 +39,7 @@ for i = 1:totread
         % Save old read value for comparison after autoGain
         old_read = mean(read);
         % Modify gain accordingly
-        [FMTO_scale, s] = VFN_FMTO_setAutoGain(s, old_read, FMTO_scale);
+        [FMTO_scale, s] = VFN_FMTO_LUCI_setAutoGain(s, old_read, FMTO_scale);
         % Check if re-read is needed
         if old_scale ~= FMTO_scale
             % FMTO_scale changed so the gain changed
@@ -60,6 +60,8 @@ for i = 1:totread
     end
     pause(Delay)
 end
+
+VFN_cleanUpFMTO;
 
 %% Plot results if needed
 if isplot
