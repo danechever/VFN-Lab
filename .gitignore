@@ -1,2 +1,14 @@
+#-- Temporary files
+**/*.swp
 
-ControlCode/PIStageCode/.DS_Store
+#-- Temporary MATLAB files
+**/*.asv
+**/*.m~
+*.m~
+*.pyc
+
+#-- Zaber External Library
+ControlCode/ZaberCode/extern_ZaberLibrary/
+
+#-- Mac-specific stuff
+.DS_Store
