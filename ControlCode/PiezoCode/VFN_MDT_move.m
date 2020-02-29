@@ -1,4 +1,4 @@
-function rVol = VFN_MDT_move(MDT, Vol, Cha)
+function rVol = VFN_MDT_move(MDT, Cha, Vol)
 % VFN_MDT_MOVE Function for moving an MDT Piezo Axis
 %   
 %   - Blocks execution until move completes
@@ -10,13 +10,23 @@ function rVol = VFN_MDT_move(MDT, Vol, Cha)
 %   * Based off the old DE2_MDTVol code
 %
 %   EXAMPLE:______
-%   rVol = VFN_MDT_MOVE(MDT, Vol, Cha)
+%   rVol = VFN_MDT_MOVE(MDT, Cha, Vol)
 %       MDT:        Serial object containing connection to MDT
-%       Vol:        position to move to (in Volts)
 %       Cha:        Axis to move ('x', 'y', or 'z') 
+%       Vol:        position to move to (in Volts)
 %       rVol:       resulting position (in Volts)
 %
 %   See also VFN_setUpMDT, VFN_cleanUpMDT
+
+% Check that Cha is valid
+if ~any(strcmp(Cha, {'x','y','z','X','Y','Z'}))
+    error('Provided axis is not valid, must be x, y or z')
+end
+
+% Check if desired voltage is within allowable region [0,150]
+if (Vol < 0 || Vol >150)
+    error('Desired MDT voltage is beyond bounds [0 - 150]');
+end
 
 % Set axis identifier to lower-case as needed by device
 Cha = lower(Cha);
@@ -26,11 +36,6 @@ wri = [Cha 'voltage?'];  %Create read command; correct channel
 fprintf(MDT, wri);              %Send read command
 rVol = fscanf(MDT, '%s');       %Read result
 rVol = str2double(rVol(3:end-1));%Convert to number
-
-% Check if desired voltage is within allowable region [0,150]
-if (Vol < 0 || Vol >150)
-    error('Desired MDT voltage is beyond bounds [0 - 150]');
-end
 
 %Loop to perform smooth change to desired voltage; 10V steps
 fla  = true;                %Exit flag

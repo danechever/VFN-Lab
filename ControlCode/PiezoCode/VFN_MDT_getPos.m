@@ -13,6 +13,11 @@ function rVol = VFN_MDT_getPos(MDT, Cha)
 %
 %   See also VFN_setUpMDT, VFN_cleanUpMDT
 
+% Check that Cha is valid
+if ~any(strcmp(Cha, {'x','y','z','X','Y','Z'}))
+    error('Provided axis is not valid, must be x, y or z')
+end
+
 % Set axis identifier to lower-case as needed by device
 Cha = lower(Cha);
 

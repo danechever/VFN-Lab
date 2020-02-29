@@ -11,7 +11,7 @@
 % Create serial port and define communication properties
     %COM# changes between computers; must check in Device Manager
 MDT     = serial('COM4', 'BaudRate', 115200, 'InputBufferSize', 1500, ...
-    'Terminator', {'CR' 'LF/CR'});
+    'Terminator', {'CR' 'LF/CR'}, 'Timeout', 1);
 
 % Connect to device
 fopen(MDT);
