@@ -8,6 +8,9 @@
 
  * Allows normalization using the redPM or an MMF and the Femto
    - Also possible to normalize at all
+   *** The MMF values reported in the fits files are now -9999 if MMF is
+        not used. This follows the same idea as the redPM when not used.
+   * Code also does not share pmRead1 between MMF and pmRead anymore
  * Outputs cubes of the same dimensionality as the PiezoScanZabFoc code
    - ie: [X, Y, Nread, Focus, VortX, VortY]
  * Uses functions from VFN Analysis Library to interpret the data immediately
@@ -29,6 +32,7 @@
 %% add the necessary functions
 addpath(genpath('C:\Users\AOlab1\Desktop\DE2\VFN\VFN-Lab\ControlCode'));
 addpath(genpath('C:\Users\AOlab1\Desktop\DE2\VFN\VFN-Lab\AnalysisCode\AnalysisLib'));
+addpath(genpath('C:\Users\AOlab1\Desktop\DE2\VFN\VFN-Simulations\VFNlib'));
 
 close all
 clear all
@@ -36,18 +40,18 @@ clear all
 %% General settings 
 
 % Directory for saving data:
-svFld = 'C:\Users\AOlab1\Desktop\DE2\VFN\PupilVFNCoupling\051519_VPL4';
+svFld = 'C:\Users\AOlab1\Desktop\DE2\VFN\PupilVFNCoupling\031220_NVR4';
 
 %-- Experiment name for figures
-expNm = '9Don_780NullCheck2';
+expNm = '7Don_775VarVortScan5';
 
 %-- Custom auto save text
 % Change at every run
-run_msg = 'Message for this run.';
+run_msg = 'Scan vortex looking at null.';
 % Change when doing new set of experiments
-set_msg = 'Message for this set of exp.';
-las_msg = 'Varia 780nm, 80%% power, 3nm BW.';   % Laser/Varia settings
-flt_msg = '600nm Longpass';                     % Optical Filter used
+set_msg = 'Prepare system to do a basic polychromatic measurement for FINESST report.';
+las_msg = 'Varia 775nm, 75%% power, 3nm BW.';   % Laser/Varia settings
+flt_msg = 'No Filter';                     % Optical Filter used
 vtx_msg = 'JPL Poly 550nm Charge 2';            % Vortex in use
 
 %-- Final analysis stuff
@@ -55,44 +59,44 @@ isRadAvgAnalysis = true;    % calc rel. int. time in all frames using rad avg
 
 %~~ ZABER STUFF 
 % Flag to enable vortex scan.
-isVortScan = false;
+isVortScan = true;
 
 % Distance to move zabers for backlash removal [in mm]
 zabBacklash= 0.005;         %Note: affects vortex and fiber z-axis
 
 % Vortex center of scan [in mm]
-VXcenter = 12.184500;       % Value when PM stage was added: 12.271445mm
-VYcenter = 13.164000;       %!! must be >13.134083-0.8
+VXcenter = 11.925000;       % Value when PM stage was added: 12.271445mm
+VYcenter = 12.820000;       %!! must be >13.134083-0.8
 
 % Vortex scan properties
 %To include center values as a point in scan; use ODD number of points
-VXpoints = 5;           % Number of X points in scan
+VXpoints = 3;           % Number of X points in scan
 VYpoints = VXpoints;    % Number of Y points in scan
 
 % Vortex step params in [mm]  
-vStepRange = min(0.03,0.8);   %Vortex will be scanned +/- this value
+vStepRange = min(0.08,0.8);   %Vortex will be scanned +/- this value
                     % ie. scan will be: 
                     % [VXcen-vStepRa to VXcen+vStepRa] w/ Vxpoi steps
                     
 % Fiber Focus Scan properties
 %To include center value as a point; use ODD number of points
-Zcenter = 3.640500;     % Focus (Z) center point
+Zcenter = 1.783000;     % Focus (Z) center point
 Zpoints = 1;            % Number of focci taken (exact number; no longer +1)
-ZStepSize = 0.003;      % Step size in mm
+ZStepSize = 0.01;      % Step size in mm
 %~~ END ZABER STUFF 
 
 %~~ PIEZO STUFF 
 % Fiber center of scan in Volts
-Xcenter = 30.50;
-Ycenter = 35.60;
+Xcenter = 84.00;
+Ycenter = 80.00;
 
 % Fiber scan properties
 %To include center values as a point in scan; use EVEN number of points
-Xpoints = 50;% number of X points in scan (actual scan will have +1)
+Xpoints = 30;% number of X points in scan (actual scan will have +1)
 Ypoints = Xpoints; % Ycenter/Xcenter will be an extra point in the middle
 
 % Fiber step sizes in Volts
-refStep   = 4; % refStep is the step size for a full PSF with a 10*10 grid
+refStep   = 5; % refStep is the step size for a full PSF with a 10*10 grid
 StepSize  = refStep/(Xpoints/10);
 backlash  = 10; % Kept backlash in to see if it did anything
 %~~ END PIEZO STUFF 
@@ -115,7 +119,7 @@ isMMFNorm = false;
 
 %~~ RED (NORM) POWER METER STUFF 
 pmNread = 100;      % Number of samples to take
-isPMNorm = false;   % Flag to mark whether Thorlabs PM100D should be read
+isPMNorm = true;   % Flag to mark whether Thorlabs PM100D should be read
                         % This flag is useful in case the PM is not in the
                         % system. -9999 will replace the pmRead values.
 % pmNormReport replaced with nrmValReport to reflect the fact that it is
@@ -129,6 +133,7 @@ pmCalWvl = 775; % Wavelength for redPM for normalization
 %~~ END RED (NORM) POWER METER STUFF
 
 %% Zaber Setup
+fprintf('---Performing Zaber Setup\n')
 if isVortScan || (Zpoints > 1) || isPMNorm
     % Enable zabers since they will be used at some point
     isZab = true;
@@ -182,10 +187,12 @@ end
     
 
 %% MDT (piezo) Setup
+fprintf('---Performing MDT Setup\n')
 % Connect to the MDT Piezos
 VFN_setUpMDT;
 
 %% Femto setup
+fprintf('---Performing Femto Setup\n')
 % Define the gain to apply for scaling. Uses same gain for all: gnFact^(FMTO_scale-6)
 gnFact  = 9.97;
 
@@ -198,7 +205,7 @@ VFN_FMTO_LUCI_setGain(FMTO_scale);
 fprintf('Current Gain setting: %i\n', FMTO_scale)
 
 %% Red Thorlabs PM setup
-
+fprintf('---Performing redPM Setup (if needed)\n')
 %-- Connect to red PM only if it will be used
 if isPMNorm
     VFN_setUpPM100D
@@ -415,6 +422,10 @@ if isMMFNorm
     
     % Record femto gain setting during MMF read
     MMF_FMTO_scale = FMTO_scale;    
+else
+    %-- Set mmf_read and MMF_FMTO_scale to -9999 if MMF is not used
+    mmf_read = ones(Nread,1)*-9999;
+    MMF_FMTO_scale = -9999;
 end
 
 %-- Use the red power meter to measure the power
@@ -767,8 +778,9 @@ fprintf('\nMax, normed (eta_p):  %f\n', eta_p);
 if ~sum(strfind(expNm, 'PSF'))
     % Assume we are analyzing a donut
     
-    %-- Find eta_p as radially-averaged max (measScl2 to have normed value directly)
-    [radProf, radVec] = VFN_An_radAverage(measScl2,[mnInd(2), mnInd(1)]);
+    %-- Find eta_p as radially-averaged max (in min frame)
+        % meas3*nrmVal to get fully normed value directly
+    [radProf, radVec] = VFN_An_radAverage(meas3*nrmVal,[mnInd(2), mnInd(1)]);
     radMax = max(radProf);
     fprintf('Max, normed (radial average): %f\n', radMax);
 
@@ -779,19 +791,19 @@ if ~sum(strfind(expNm, 'PSF'))
     ylabel('Coupling [%]');
 
     %-- Print pertinent values in command window
-    fprintf('\n\n- Max/Min ratio in Frame = (%f/%f)    ------> = %0.2f\n', mxVal, mnVal, eta_p/eta_s)
+    fprintf('\n- Max/Min ratio in Frame = (%f/%f)    ------> = %0.2f\n', mxVal, mnVal, eta_p/eta_s)
     fprintf('- Eta_s = (%f*%f) w/ approx vals for thrpt -> = %f\n', mnVal, nrmVal, eta_s)
     fprintf('- Eta_p = (%f*%f) w/ approx vals for thrpt -> = %f\n', mxVal, nrmVal, eta_p)
-    fprintf('- Average Eta_p w/ approx vals for thrpt ---> = %f\n', radMax) 
-	fprintf('- Rel. Int. Time = (%f/%f ^2) w/ rad Avg ---> = %0.2f\n', eta_s, radMax, eta_s/(radMax^2))
+    fprintf('- Average Eta_p w/ approx vals for thrpt          ------> = %f\n', radMax) 
+	fprintf('- Rel. Int. Time = (%f/%f ^2) w/ rad Avg ---> = %f\n', eta_s, radMax, eta_s/(radMax^2))
     
     %-- Automated DataNotes
     fileID = fopen(datFl, 'a');
     fprintf(fileID, '\n      - Max/Min ratio in Frame = (%f/%f)    ------> = %0.2f\n', mxVal, mnVal, eta_p/eta_s);
     fprintf(fileID, '      - Eta_s = (%f*%f) w/ approx vals for thrpt -> = %f\n', mnVal, nrmVal, eta_s);
     fprintf(fileID, '      - Eta_p = (%f*%f) w/ approx vals for thrpt -> = %f\n', mxVal, nrmVal, eta_p);
-    fprintf(fileID, '      - Average Eta_p w/ approx vals for thrpt ---> = %f\n', radMax);
-	fprintf(fileID, '      - Rel. Int. Time = (%f/%f ^2) w/ rad Avg ---> = %0.2f\n', eta_s, radMax, eta_s/(radMax^2));
+    fprintf(fileID, '      - Average Eta_p w/ approx vals for thrpt          ------> = %f\n', radMax);
+	fprintf(fileID, '      - Rel. Int. Time = (%f/%f ^2) w/ rad Avg ---> = %f\n', eta_s, radMax, eta_s/(radMax^2));
     fclose(fileID);
 else
     % Analysing the PSF
@@ -826,9 +838,9 @@ end
 if isRadAvgAnalysis
 %-- Preallocate data matrices 
 % radially-averaged maximum in each frame
-radMaxs = nan(distZ, distVX, distVY);
+radMxs = nan(length(distZ), length(distVX), length(distVY));
 % Null value in each frame
-radMns = radMaxs;
+radMns = radMxs;
 
 %-- Iterate through frames and calculate ratio
 for a = 1:length(distVX)
@@ -840,22 +852,30 @@ for a = 1:length(distVX)
             [radMns(k, a, b), radMnInd] = VFN_An_getEta_s(meas2, cropVal);
             % Calculate average radial profile
             [radProf2, ~] = VFN_An_radAverage(meas2,[radMnInd(2), radMnInd(1)]);
-            radMaxs(k, a, b) = max(radProf2);                
+            radMxs(k, a, b) = max(radProf2);                
         end
     end
 end
 
 %-- Calculate relative integration time in each frame
-relTints = radMns./(radMaxs.^2);
+relTints = radMns./(radMxs.^2);
 
 %-- Find best value
 [bestTint, bestTintInd] = min(relTints(:)); 
 [bestZ, bestVX, bestVY] = ind2sub(size(relTints), bestTintInd);
 
 %-- Print results
-fprintf('\n\nBest Integration Time: %f'\n, bestTint);
+fprintf('\nBest Integration Time: %f\n', bestTint);
 fprintf('Best Location: (fibZ %i, vortX %i, vortY %i)\n', bestZ, bestVX, bestVY);
-fprintf('\n\nFull rel. tint. matrix\n')
+% Print into DataNotes
+fileID = fopen(datFl, 'a');
+fprintf(fileID, '      - Best Rel. Int. Time = (%f/%f ^2) w/ rad avg -> = %f\n',...
+    radMns(bestZ,bestVX,bestVY),radMxs(bestZ,bestVX,bestVY), bestTint);
+fprintf(fileID, '      - Best Rel Int Time Loc (fibz = %i, vX = %i, vY = %i)\n', bestZ, bestVX, bestVY);
+fclose(fileID);
+
+fprintf('\nFull rel. tint. matrix\n')
+relTints = permute(relTints, [3 2 1]);
 disp(relTints);
 
 end
