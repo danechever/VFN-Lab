@@ -1,0 +1,8 @@
+Steps To Install redPM software on Windows 10:
+- Does not need installation of Thorlabs red PM software
+- Download ThorlabsPM100 library from git: https://github.com/clade/ThorlabsPM100
+- Install: "python setup.py install"
+- Install PyVisa: pip install -U pyvisa
+  - help: "https://pyvisa.readthedocs.io/en/stable/introduction/getting.html"
+- Download PI Visa drivers: https://www.ni.com/en-us/support/downloads/drivers/download.ni-visa.html#329456
+  - Follow installation instructions
