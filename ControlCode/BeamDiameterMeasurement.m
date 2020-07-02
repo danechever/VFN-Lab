@@ -1,21 +1,19 @@
 % Assumes pm and zabers are already initialized as done in PiezoScan code
 
 pmNread = 100;      % number of power measurments at each point
-posPts  = 200;      % number of points
+posPts  = 100;      % number of points
 
-ptsStrt = 13;
-ptsStop = 17.5; 
+ptsStrt = 18.5;
+ptsStop = 23; 
 
 pmPos   = linspace(ptsStrt,ptsStop,posPts);
 pmReads = nan(posPts,pmNread);
 
 
 for jj = 1:posPts
-    VFN_Zab_move(pmX, pmPos(jj));
-    pause(0.5)
-    for ii = 1:pmNread
-        pmReads(jj,ii)=str2num(query(obj1, 'measure:power?'));
-    end    
+    VFN_Zab_move(Zabs.pmX, pmPos(jj));
+    pause(0.3)
+    pmReads(jj,:)=VFN_PM100D_read(PM,pmNread);
 end
 if sum(isnan(pmReads))
     fprintf('nan present')
@@ -34,7 +32,7 @@ fprintf('Beam Size: %f\n',pmPos(indMin)-pmPos(indMax))
 figure()
 plot(pmPos, pmDev)
 
-flnm = 'C:\Users\AOlab1\Desktop\DE2\VFN\PupilVFNCoupling\021919_FNM3\BeamDiam';
+flnm = 'C:\Users\AOlab1\Desktop\DE2\VFN\PupilVFNCoupling\200615_COV1\Realigned_BeamDiam635nmLasSamp2';
 
 save(flnm, 'pmPos', 'pmReads')
 
