@@ -40,18 +40,18 @@ clear all
 %% General settings 
 
 % Directory for saving data:
-svFld = 'C:\Users\AOlab1\Desktop\DE2\VFN\PupilVFNCoupling\031220_NVR4';
+svFld = 'C:\Users\AOlab1\Desktop\DE2\VFN\PupilVFNCoupling\200701_COV3';
 
 %-- Experiment name for figures
-expNm = '7Don_775VarVortScan5';
+expNm = '10Don_785LasDeepScan2';
 
 %-- Custom auto save text
 % Change at every run
-run_msg = 'Scan vortex looking at null.';
+run_msg = 'Check first decent spot in #9.';
 % Change when doing new set of experiments
-set_msg = 'Prepare system to do a basic polychromatic measurement for FINESST report.';
-las_msg = 'Varia 775nm, 75%% power, 3nm BW.';   % Laser/Varia settings
-flt_msg = 'No Filter';                     % Optical Filter used
+set_msg = 'Check bench performance after realignment.';
+las_msg = 'Laser 785nm, 7.0mW.';   % Laser/Varia settings
+flt_msg = 'N/A';                     % Optical Filter used
 vtx_msg = 'JPL Poly 550nm Charge 2';            % Vortex in use
 
 %-- Final analysis stuff
@@ -59,14 +59,14 @@ isRadAvgAnalysis = true;    % calc rel. int. time in all frames using rad avg
 
 %~~ ZABER STUFF 
 % Flag to enable vortex scan.
-isVortScan = true;
+isVortScan = false;
 
 % Distance to move zabers for backlash removal [in mm]
-zabBacklash= 0.005;         %Note: affects vortex and fiber z-axis
+zabBacklash= 0.015;         %Note: affects vortex and fiber z-axis
 
 % Vortex center of scan [in mm]
-VXcenter = 11.925000;       % Value when PM stage was added: 12.271445mm
-VYcenter = 12.820000;       %!! must be >9.9
+VXcenter = 03.312000;       % 
+VYcenter = 13.917000;       %!! must be >9.9
 
 % Vortex scan properties
 %To include center values as a point in scan; use ODD number of points
@@ -74,29 +74,29 @@ VXpoints = 3;           % Number of X points in scan
 VYpoints = VXpoints;    % Number of Y points in scan
 
 % Vortex step params in [mm]  
-vStepRange = min(0.08,0.8);   %Vortex will be scanned +/- this value
+vStepRange = min(0.008,0.8);   %Vortex will be scanned +/- this value
                     % ie. scan will be: 
                     % [VXcen-vStepRa to VXcen+vStepRa] w/ Vxpoi steps
                     
 % Fiber Focus Scan properties
 %To include center value as a point; use ODD number of points
-Zcenter = 1.783000;     % Focus (Z) center point. !! must be < 9
+Zcenter = 7.032000;     % Focus (Z) center point. !! must be < 9
 Zpoints = 1;            % Number of focci taken (exact number; no longer +1)
-ZStepSize = 0.01;      % Step size in mm
+ZStepSize = 0.007;      % Step size in mm
 %~~ END ZABER STUFF 
 
 %~~ PIEZO STUFF 
 % Fiber center of scan in Volts
-Xcenter = 84.00;
-Ycenter = 80.00;
+Xcenter = 75.00;
+Ycenter = 100.00;
 
 % Fiber scan properties
 %To include center values as a point in scan; use EVEN number of points
-Xpoints = 30;% number of X points in scan (actual scan will have +1)
+Xpoints = 50;% number of X points in scan (actual scan will have +1)
 Ypoints = Xpoints; % Ycenter/Xcenter will be an extra point in the middle
 
 % Fiber step sizes in Volts
-refStep   = 5; % refStep is the step size for a full PSF with a 10*10 grid
+refStep   = 10; % refStep is the step size for a full PSF with a 10*10 grid
 StepSize  = refStep/(Xpoints/10);
 backlash  = 10; % Kept backlash in to see if it did anything
 %~~ END PIEZO STUFF 
@@ -129,7 +129,7 @@ nrmValReport = 1/44.1;   % @635nm typ = 14.08; @780nm typ = 44.1
                         % affects the printed values at end; NORM'd cube
                         % values are still un-normed. SET =1 to not norm
                         % the printed values.
-pmCalWvl = 775; % Wavelength for redPM for normalization
+pmCalWvl = 785; % Wavelength for redPM for normalization
 %~~ END RED (NORM) POWER METER STUFF
 
 %% Zaber Setup
@@ -422,12 +422,42 @@ if isPMNorm
     %Move if no collision
     VFN_Zab_move(Zabs.pmX, 0);
 
-    %-- Dead from red PM 
+    %-- Read from red PM 
     % Wait for PM value to settle
     pause(2);
 
-    % Take measurements of the power
-    pmRead = VFN_PM100D_read(PM, pmNread);
+    % Take measurements of the power (use try catch to avoid errors)
+    NTries = 5;
+    for i = 1:NTries
+        try 
+            % This is where the read often fails 
+            pmRead = VFN_PM100D_read(PM, pmNread);
+        catch ME
+            % An error occurred, let the user know
+            warning('PM read failed')
+            if i < 5
+                % We have tried less than NTries times, try again
+                
+                % Wait a moment to give the redPM time to figure itself out
+                pause(1);
+                
+                % First, try playing with the wavelength settings
+                    % This seems to help for some reason
+                VFN_PM100D_setWavelength(PM, pmCalWvl);
+                pause(0.1);
+                VFN_PM100D_getWavelength(PM);
+                
+                % Now try again (continue will jump straight to next iter.)
+                fprintf('Trying again\n')
+                continue
+            else
+                % We've tried 5 times, it's time to give up
+                error('Multiple redPM reads failed')
+            end
+        end
+        % If we get here, succeeded in reading so exit for-loop and proceed
+        break
+    end
 else
     %-- Set pmRead to -9999 if PM is not to be read
     pmRead = ones(pmNread,1)*-9999;
@@ -799,12 +829,12 @@ else
     
     fprintf('\n\n- Max:                        %f', mxVal2)
     fprintf('\n- Power on Fiber tip:         %f', 1/nrmVal)
-    fprintf('\n- Max, normed (coupling):     %f\n', eta_p)
+    fprintf('\n- Max, normed (coupling):     %f\n', mxVal2*nrmVal)
     % Automated DataNotes
     fileID = fopen(datFl, 'a');
     fprintf(fileID, '\r\n         - Max:                        %f', mxVal2);
     fprintf(fileID, '\r\n         - Power on Fiber tip:         %f', 1/nrmVal);
-    fprintf(fileID, '\r\n         - Max, normed (coupling):     %f\r\n\r\n', eta_p);
+    fprintf(fileID, '\r\n         - Max, normed (coupling):     %f\r\n\r\n', mxVal2*nrmVal);
     fclose(fileID);
     % Display max in each frame of focus
     tmp1 = nan(size(measScl2,4),1);
