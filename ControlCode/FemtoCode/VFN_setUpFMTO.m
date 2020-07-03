@@ -1,4 +1,4 @@
-addpath(genpath('C:\Users\AOlab1\Documents\MATLAB\Add-Ons\Toolboxes\Zaber Device Control Toolbox\code'))
+%addpath(genpath('C:\Users\AOlab1\Documents\MATLAB\Add-Ons\Toolboxes\Zaber Device Control Toolbox\code'))
 
 %LUCI library
 addpath('C:\Program Files (x86)\FEMTO\LUCI-10\Software\Matlab Libraries');
@@ -7,7 +7,7 @@ addpath('C:\Program Files (x86)\FEMTO\LUCI-10\Software\Matlab Libraries');
 s = daq.createSession('ni');
 
 % Add analog input channel
-addAnalogInputChannel(s,'Dev2', 0, 'Voltage');
+addAnalogInputChannel(s,'Dev1', 0, 'Voltage');
 
 % Set Scan parameters
 s.Rate = Nrate;             % [samples/second]

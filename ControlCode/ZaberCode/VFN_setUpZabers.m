@@ -1,98 +1,67 @@
-addpath(genpath('C:\Users\AOlab1\Documents\MATLAB\Add-Ons\Toolboxes\Zaber Device Control Toolbox\code'))
+%% Imports and setup
+% Import Zaber objects
+import zaber.motion.Library;
+import zaber.motion.ascii.Connection;
+import zaber.motion.ascii.AxisSettings
+
+
+%-- Allow library to download the latest Database 
+% Stores device database so that it doesn't need to be pulled from internet
+% again in the future. More details here: 
+% - https://www.zaber.com/software/docs/motion-library/ascii/howtos/device_db/
+Library.enableDeviceDbStore();
 
 %% Axes Serial Numbers
 % Change these values if the serial numbers on the axes are changed
-AXIS_63 = 51463;
-AXIS_93 = 52893;
-AXIS_14 = 52714;
-AXIS_214 = 59214;
+    % This feature is technically not needed but I decided to add it since
+    % it forces the user to be conscious of which zaber devices are
+    % connected. Like this they are aware of any numbering issues and such.
+EXPECTED_AXES = [51463, ...
+                 52893, ...
+                 52714, ...
+                 59214, ...
+                 60707]; 
 
-%%  Prepare MATLAB serial port
-% Instantiate the serial object
-port = serial('COM3');
-
-% Set default serial port properties for the binary protocol.
-set(port, ...
-    'BaudRate',     115200, ...
-    'DataBits',     8, ...
-    'FlowControl',  'none', ...
-    'Parity',       'none', ...
-    'StopBits',     1, ...
-    'Terminator',   'CR/LF', ...
-    'Timeout',      0.5);
-
-% Disable timeout warning; Zaber lib intentionally times out for some reads
-warning off MATLAB:serial:fgetl:unsuccessfulRead    % This is the warning for ASCII protocol
-%warning off MATLAB:serial:fread:unsuccessfulRead   % This is the warning for Binary protocol
-
-% Open the port.
-fopen(port);
+%%  Open serial port/connection
+% Use the zaber library to open the port
+port = Connection.openSerialPort('COM4');
 
 %% Instantiate the Zaber Classes
 try
-    % Create AsciiProtocol object (only 1 since axes are daisy-chained)
-    protocol = Zaber.AsciiProtocol(port);
+    % Find all connected devices
+    devs = port.detectDevices();
     
-    devs = protocol.finddevices();
-    
-    % Use device serial numbers to match axes
-    for i = 1:length(devs)
-        serNum = devs(i).request('get', 'system.serial').Data;
-        if serNum == AXIS_63
-            ax63 = devs(i);
-        elseif serNum == AXIS_93
-            ax93 = devs(i);
-        elseif serNum == AXIS_14
-            ax14 = devs(i);
-        elseif serNum == AXIS_214
-            ax214 = devs(i);
+    % Use device serial numbers to match axes and create instance in struct
+    for i = 1:devs.length
+        serNum = devs(i).getSerialNumber;
+        if ismember(serNum, EXPECTED_AXES)
+            % Device was expected; add it to the output struct
+            tag = sprintf('AX_%d', serNum);
+            Zabs.(tag) = devs(i).getAxis(1);
         else
-            error('An unrecognized zaber was found\n  Serial Numer: %d',...
+            error('An unrecognized zaber was found\n Serial Number :%d',...
                 serNum)
         end
     end
     
-    %% Home the axes if they have not been homed
-    if exist('ax14', 'var')
-        if ~ax14.request('get', 'limit.home.triggered').Data
-            ax14.home;
-            fprintf('ax14 Homed\n')
-        end
-    else
-        fprintf('ax14 Not Present\n')
-    end
+    %% Home each axis if it has not been homed
+    % Get all elements in the struct so that we can iterate through them
+    axs = fieldnames(Zabs);
     
-    if exist('ax63', 'var')
-        if ~ax63.request('get', 'limit.home.triggered').Data
-            ax63.home;
-            fprintf('ax63 Homed\n')
+    % Iterate through axes
+    for i = 1:numel(axs)
+        if ~Zabs.(axs{i}).getSettings().get('limit.home.triggered')
+            % Axis was not homed so home it
+            Zabs.(axs{i}).home
+            fprintf('%s Homed\n', axs{i})
         end
-    else
-        fprintf('ax63 Not Present\n')
-    end
-    
-    if exist('ax93', 'var')
-        if ~ax93.request('get', 'limit.home.triggered').Data
-            ax93.home;
-            fprintf('ax93 Homed\n')
-        end
-    else
-        fprintf('ax93 Not Present\n')
-    end
-    
-    if exist('ax214', 'var')
-        if ~ax214.request('get', 'limit.home.triggered').Data
-            ax214.home;
-            fprintf('ax214 Homed\n')
-        end
-    else
-        fprintf('ax214 Not Present\n')
     end
     
 catch exception
     % Close port if an error occurs, otherwise it remains locked
-    fclose(port);
+    port.close();
+    fprintf('An error occurred, port was closed\n');
     rethrow(exception);
 end
 
-clear('AXIS*', 'protocol', 'serNum', 'devs', 'i')
+clear('EXPECTED_AXES', 'serNum', 'devs', 'axs', 'tag', 'i')

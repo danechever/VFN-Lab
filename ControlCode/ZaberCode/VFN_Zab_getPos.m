@@ -3,22 +3,20 @@ function resPos = VFN_Zab_getPos(axis)
 %   
 %   EXAMPLE:______
 %   resPos = VFN_Zab_getPos(axis)
-%       axis:       Axis to query. Must be an instance of Zaber.AsciiDevice
+%       axis:       Axis to home. Must be an instance of zaber.motion.ascii.Axis
 %       resPos:     resulting position (in mm)
 
-if ~isa(axis, 'Zaber.AsciiDevice')
-    error('The first argument must be a Zaber Ascii Device object')
+if ~isa(axis, 'zaber.motion.ascii.Axis')
+    error('The first argument must be a zaber.motion.ascii.Axis object')
 end
-
-M2MM = 1000;    %Conversion by which to multiply m to get mm
 
 %% get the position of each axis
 % Query position; convert to mm
 try
-    resPos = axis.Units.nativetoposition(axis.getposition)*M2MM;
+    resPos = axis.getPosition(zaber.motion.Units.LENGTH_MILLIMETRES);
 catch exception
     % Close port if a MATLAB error occurs, otherwise it remains locked
-    fclose(axis.Protocol.Port);
+    axis.getDevice().getConnection().close();
     rethrow(exception);
 end
 

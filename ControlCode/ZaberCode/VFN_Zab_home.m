@@ -3,20 +3,18 @@ function VFN_Zab_home(axis)
 %   
 %   EXAMPLE:______
 %   resPos = VFN_Zab_move(axis)
-%       axis:       Axis to home. Must be an instance of Zaber.AsciiDevice.
+%       axis:       Axis to home. Must be an instance of zaber.motion.ascii.Axis
 
-if ~isa(axis, 'Zaber.AsciiDevice')
-    error('The first argument must be a Zaber Ascii Device object')
+if ~isa(axis, 'zaber.motion.ascii.Axis')
+    error('The first argument must be a zaber.motion.ascii.Axis object')
 end
 
 try
     axis.home();
 catch exception
     % Close port if a MATLAB error occurs, otherwise it remains locked
-    fclose(axis.Protocol.Port);
+    axis.getDevice().getConnection().close();
     rethrow(exception);
 end
-
-axis.waitforidle();
 
 end

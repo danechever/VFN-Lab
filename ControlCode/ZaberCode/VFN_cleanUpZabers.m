@@ -1,15 +1,14 @@
-%% Close the connections and populate the result accordingly
+%% Close the zaber port object and delete the Zabs struct
 
-if port.isvalid
-    fclose(port);
-
-    if strcmp(port.Status, 'closed')
-        delete(port)
-        clear port
-        fprintf('Port closed\n')
-    else
-        fprintf('Port did not close correctly\n')    
-    end
+%-- Close the port if it exists (repeated .close() calls cause no issues)
+if exist('port', 'var')
+    port.close();
+    clear port
+	fprintf('Zaber port closed\n')
 else 
-    fprintf('port was invalid\n')
+    fprintf('Zaber port did not exist\n')
 end
+
+% %-- Delete the Zabs object once port is closed
+clear Zabs
+  
