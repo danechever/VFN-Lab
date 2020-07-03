@@ -30,9 +30,9 @@
 %}
 
 %% add the necessary functions
-addpath(genpath('C:\Users\AOlab1\Desktop\DE2\VFN\VFN-Lab\ControlCode'));
-addpath(genpath('C:\Users\AOlab1\Desktop\DE2\VFN\VFN-Lab\AnalysisCode\AnalysisLib'));
-addpath(genpath('C:\Users\AOlab1\Desktop\DE2\VFN\VFN-Simulations\VFNlib'));
+addpath(genpath('C:\Users\Daniel Echeverri\Documents\MATLAB\VFN-Lab\ControlCode'));
+addpath(genpath('C:\Users\Daniel Echeverri\Documents\MATLAB\VFN-Lab\AnalysisCode\AnalysisLib'));
+addpath(genpath('C:\Users\Daniel Echeverri\Documents\MATLAB\VFN-Simulations\VFNlib'));
 
 close all
 clear all
@@ -66,7 +66,7 @@ zabBacklash= 0.005;         %Note: affects vortex and fiber z-axis
 
 % Vortex center of scan [in mm]
 VXcenter = 11.925000;       % Value when PM stage was added: 12.271445mm
-VYcenter = 12.820000;       %!! must be >13.134083-0.8
+VYcenter = 12.820000;       %!! must be >9.9
 
 % Vortex scan properties
 %To include center values as a point in scan; use ODD number of points
@@ -80,7 +80,7 @@ vStepRange = min(0.08,0.8);   %Vortex will be scanned +/- this value
                     
 % Fiber Focus Scan properties
 %To include center value as a point; use ODD number of points
-Zcenter = 1.783000;     % Focus (Z) center point
+Zcenter = 1.783000;     % Focus (Z) center point. !! must be < 9
 Zpoints = 1;            % Number of focci taken (exact number; no longer +1)
 ZStepSize = 0.01;      % Step size in mm
 %~~ END ZABER STUFF 
@@ -140,28 +140,10 @@ if isVortScan || (Zpoints > 1) || isPMNorm
 end
 
 %~~ Connect to Zabers to query position
-VFN_setUpZabers; % Instantiate the zabers
-
-%- Relabel the variables for clarity
-if exist('ax14', 'var')
-    Zabs.vortX = ax14;
-    clear ax14
-end
-if exist('ax63', 'var')
-    Zabs.vortY = ax63;
-    clear ax63
-end
-if exist('ax93', 'var')
-    Zabs.fibZ = ax93;
-    clear ax93
-end
-if exist('ax214', 'var')
-    Zabs.pmX = ax214;
-    clear ax214
-end
+VFN_setUpBenchZabers; % Instantiate and rename the zabers
 
 %- Make sure pmX is out of the way
-if (exist('Zabs', 'var') && isfield(Zabs, 'pmX'))
+if isfield(Zabs, 'pmX')
     VFN_Zab_move(Zabs.pmX, 25);
 elseif isPMNorm
     error('PM Norm is requested but no pmX Zaber exists.')
@@ -180,9 +162,6 @@ end
 %- Disable Zabers for rest of code if not needed anymore
 if ~isZab 
     VFN_cleanUpZabers;
-    if exist('Zabs', 'var')
-        clear Zabs
-    end
 end
     
 
@@ -190,6 +169,11 @@ end
 fprintf('---Performing MDT Setup\n')
 % Connect to the MDT Piezos
 VFN_setUpMDT;
+
+% Query MDT on each pertinent axis to ensure correct reads later
+    % It seems the very first read after connection might be incorrect
+VFN_MDT_getPos(MDT, 'x')
+VFN_MDT_getPos(MDT, 'y')
 
 %% Femto setup
 fprintf('---Performing Femto Setup\n')
@@ -293,14 +277,14 @@ for a = 1:length(distVX)
 
     %remove zaber (Y) backlash
       % check for collisions first
-    if (distVY(1)-zabBacklash) >= 12.33
+    if (distVY(1)-zabBacklash) >= 9.9
         % VortY axis will not collide in the next move
         if isZab && (distVY(1) ~= VFN_Zab_getPos(Zabs.vortY))
             % Remove y backlash now that motion is confirmed safe
             VFN_Zab_move(Zabs.vortY, distVY(1)-zabBacklash);
         end
     else
-        error('vortY position will collide with lens mount')
+        error('vortY position will collide with pmX')
     end
     
     for b = 1:length(distVY)
@@ -311,7 +295,7 @@ for a = 1:length(distVX)
 
         % Remove zaber focus (Z) backlash
           % check for collisions first
-        if (distZ(1)-zabBacklash) <= 7.8
+        if (distZ(1)-zabBacklash) <= 9
             % fibZ axis will not collide in the next move
             if isZab && (distZ(1) ~= VFN_Zab_getPos(Zabs.fibZ))
                 % Remove z backlash now that motion is confirmed safe
@@ -432,7 +416,7 @@ end
 if isPMNorm
     %-- Move redPM into the beam
     % Check that no collisions will occur from motion
-    if VFN_Zab_getPos(Zabs.vortY) < 12.35
+    if VFN_Zab_getPos(Zabs.vortY) < 9.9
         error('Vortex Y-Axis is in the way')
     end
     %Move if no collision
@@ -502,9 +486,6 @@ if isZab
     
     %-- Clean up
     VFN_cleanUpZabers;
-    if exist('Zabs', 'var')
-        clear Zabs
-    end
 end
 
 %-- Disconnect from calibration PM
