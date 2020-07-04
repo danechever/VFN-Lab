@@ -1,8 +1,10 @@
-%Script to prepare the Zabers specifically for the VFN transmissive bench
+%Script to prepare the Zabers specifically for the VFN bench
 %
 % This will rename the various axes to match the nomencalture used in 
-% VFN_Main_Transmissive_Simple. It does not move any of the axes, just
-% instantiates them with the appropriate names in the workspace.
+% our main control scripts. 
+% --> Instantiates the axes with the appropriate names in the workspace.
+%
+% Any unrecognized axes (not in "names" below) are left unchanged
 
 %% Define name list
 % Populate a struct that translates an old name (w/ SN) to the simple name
@@ -30,3 +32,5 @@ for i = 1:numel(axs)
         Zabs = rmfield(Zabs, axs{i});
     end
 end
+
+clear('axs', 'names')

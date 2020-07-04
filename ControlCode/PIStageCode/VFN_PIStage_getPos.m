@@ -1,24 +1,22 @@
-function currentPos = VFN_PIStage_getPos(axis, PIdevice)
-% VFN_PIStage_getPos Function for quering the position of the PI stages
+function pos = VFN_PIStage_getPos(stage)
+% VFN_PIStage_getPos Function for quering the position of a PI stage
+%   Value returned in [mm]
+%
+% NOTE: assumes the axis name is '1'
 %   
 %   EXAMPLE:______
-%   currentPos = VFN_PIStage_getPos(axis, PIdevice)
-%         1) 'axis'         = multidimensional cell containing the axis names for use by other scripts
-%         2) 'PIdevice'     = instance of device (USB connection) object
+%   pos = VFN_PIStage_getPos(stage)
+%       'stage' = instance of PI device (USB connection) object
+%                 (ie. a single field in the PIdevs struct)
+%       'pos'   = output position in [mm]
 
-%% Get Positions axis by axis
-currentPos = zeros(1, length(axis));
 
-for axisID=1:length(axis)
-    try
-        currentPos = PIdevice.qPOS(char(axis(axisID))); % Returns mm already
-    catch exception
-        % Close port if a MATLAB error occurs, otherwise it remains locked
-        VFN_PIStage_cleanUp;
-        %fclose(axis.Protocol.Port); %From Zab_getpos
-        rethrow(exception);
-    end
-end
+% NOTE: I removed lots of error checking to reduce runtime
 
-clear axisID
+% Assume axis name is '1'
+axis = '1';
+
+%% Get position
+pos = stage.qPOS(axis);
+
 end

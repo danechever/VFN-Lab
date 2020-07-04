@@ -9,17 +9,22 @@
 
 %% Load PI MATLAB Driver GCS2
 %  (if not already loaded)
-addpath ( 'C:\Users\Public\PI\PI_MATLAB_Driver_GCS2' ); % If you are still using XP, please look at the manual for the right path to include.
+addpath ( 'C:\Program Files (x86)\Physik Instrumente (PI)\Software Suite\MATLAB_Driver\' ); % If you are still using XP, please look at the manual for the right path to include.
 
 if ( ~exist ( 'Controller', 'var' ) || ~isa ( Controller, 'PI_GCS_Controller' ) )
     Controller = PI_GCS_Controller ();
-end;
+end
 
 
 %% Start connection
 %(if not already connected)
 
-boolPIdeviceConnected = false; if ( exist ( 'PIdevice', 'var' ) ), if ( PIdevice.IsConnected ), boolPIdeviceConnected = true; end; end;
+boolPIdeviceConnected = false; 
+if ( exist ( 'PIdevice', 'var' ) )
+    if ( PIdevice.IsConnected )
+        boolPIdeviceConnected = true; 
+    end
+end
 
 if ( ~(boolPIdeviceConnected ) )
 % Please choose the connection type you need.    
