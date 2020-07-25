@@ -34,11 +34,11 @@ if nargin > 1
     % Preallocate vector
     read = nan(nRead,1);
     for i = 1:nRead
-        read(i) = PM.PM.read();
+        read(i) = PM.PM.read;
     end
 else
     % No argument provided; perform single read
-    read = PM.PM.read();
+    read = PM.PM.read;
 end
 
 end

@@ -31,11 +31,6 @@
 
 %}
 
-CHECK THE MOTION LIMITS FOR THE PI STAGES AND FIX THE VALUES IN THE CODE (LINE ~294)
-  ADD NEW LIMITS FOR FIBX AND FIBY IF NEEDED
-CHECK DISTX DISTY DISTZ BEFORE RUNNING THE CODE
-  CHECK THE VECTORS THEMSELVES --> THAT THE VALUES AND RANGES ARE CORRECTS
-
 
 %% add the necessary functions
 addpath(genpath(['..' filesep 'ControlCode']));
@@ -48,16 +43,16 @@ clear all
 %% General settings 
 
 % Directory for saving data:
-svFld = 'C:\Users\Daniel Echeverri\Documents\TempVFNData\200701_COV3';
+svFld = 'C:\Users\Daniel Echeverri\Documents\TempVFNData\200722_COV4';
 
 %-- Experiment name for figures
-expNm = '15Don_785LasServerRun6';
+expNm = '24Don_785LasQuickCheck1';
 
 %-- Custom auto save text
 % Change at every run
-run_msg = 'Run Don again.';
+run_msg = 'Computer restarted last night. Check that code still runs.';
 % Change when doing new set of experiments
-set_msg = 'Check bench performance after switching to VFN server.';
+set_msg = 'Check bench performance after switching to PI FIU stage.';
 las_msg = 'Laser 785nm, 7.0mW.';   % Laser/Varia settings
 flt_msg = 'N/A';                     % Optical Filter used
 vtx_msg = 'JPL Poly 550nm Charge 2';            % Vortex in use
@@ -70,11 +65,11 @@ isRadAvgAnalysis = true;    % calc rel. int. time in all frames using rad avg
 isVortScan = false;
 
 % Distance to move zabers for backlash removal [in mm]
-zabBacklash= 0.015;         %Note: affects vortex and fiber z-axis
+zabBacklash= 0.040;         %Note: affects vortex and fiber z-axis
 
 % Vortex center of scan [in mm]
-VXcenter = 03.312000;       % 
-VYcenter = 13.917000;       %!! must be >9.9
+VXcenter =  3.180000;       % 
+VYcenter = 14.030000;       %!! must be >9.9
 
 % Vortex scan properties
 %To include center values as a point in scan; use ODD number of points
@@ -82,7 +77,7 @@ VXpoints = 3;           % Number of X points in scan
 VYpoints = VXpoints;    % Number of Y points in scan
 
 % Vortex step params in [mm]  
-vStepRange = min(0.008,0.8);   %Vortex will be scanned +/- this value
+vStepRange = min(0.015,0.8);   %Vortex will be scanned +/- this value
                     % ie. scan will be: 
                     % [VXcen-vStepRa to VXcen+vStepRa] w/ Vxpoi steps
 %~~ END ZABER STUFF 
@@ -90,22 +85,22 @@ vStepRange = min(0.008,0.8);   %Vortex will be scanned +/- this value
 %~~ PI STUFF 
 % Fiber Focus Scan properties
 %To include center value as a point; use ODD number of points
-Zcenter = 7.032000;     % Focus (Z) center point. !! must be < 9
+Zcenter = -10.1800 ;     % Focus (Z) center point. !! must be < 9
 Zpoints = 1;            % Number of focci taken (exact number; no longer +1)
-ZStepSize = 0.007;      % Step size in mm
+ZStepSize = 0.002;      % Step size in mm
 
 % Fiber X/Y center of scan in mm
-Xcenter = 75.00; % [mm]
-Ycenter = 75.00; % [mm]
+Xcenter = -0.0110; % [mm]
+Ycenter =  2.2920; % [mm]
 
 % Fiber scan properties
 %To include center values as a point in scan; use EVEN number of points
-Xpoints = 20;% number of X points in scan (actual scan will have +1)
+Xpoints = 30;% number of X points in scan (actual scan will have +1)
 Ypoints = Xpoints; % Ycenter/Xcenter will be an extra point in the middle
 
 % Fiber step sizes in Volts
 refStep   = 10; % refStep is the step size for a full PSF with a 10*10 grid
-StepSize  = refStep/(Xpoints/10);
+StepSize  = refStep/(Xpoints/1e-3);
 %~~ END PIEZO STUFF 
 
 %~~ FEMTO POWER METER STUFF 
@@ -223,7 +218,7 @@ fprintf(fileID, '        Vortex Mask:   %s\r\n', vtx_msg);
 trash = [Xcenter; Ycenter; Zcenter];
 fprintf(fileID, '        scan center    (%8.6f mm,%8.6f mm, %8.6f mm)\r\n', trash);
 trash = [Xpoints; Zpoints; refStep; refStep; Xpoints; ZStepSize];
-fprintf(fileID, '        Scan params:   xpoi = %d, zpoi = %d, refStep = %d, stepsize = %d/(%d/10); zstep = %4.2f mm\r\n', trash);
+fprintf(fileID, '        Scan params:   xpoi = %d, zpoi = %d, refStep = %d, stepsize = %d/(%d/1e-3); zstep = %4.2f mm\r\n', trash);
 fprintf(fileID, '        isAutoScale:   %s\r\n', mat2str(isAutoScale));
 trash = [FMTO_scale; Nread; Nrate];
 fprintf(fileID, '        Femto:         FMTO_scale = %d; Nread = %d; Nrate = %d\r\n', trash);
@@ -293,7 +288,7 @@ for a = 1:length(distVX)
         end
 
        for k=1:length(distZ)
-            if (distZ(k) <= 9)
+            if (distZ(k) >= -12.455)
                 VFN_PIStage_move(PIdevs.fibZ, distZ(k));
             else
                 error('fibZ positions will collide with lens mount')
@@ -309,8 +304,12 @@ for a = 1:length(distVX)
                 VFN_PIStage_move(PIdevs.fibX, distX(j));
                                 
                 for i=1:Ypoints+1
-                    % Move fibY
-                    VFN_PIStage_move(PIdevs.fibY, distY(i));
+                    if (distY(i) <= 3.8915)
+                        % Move fibY
+                        VFN_PIStage_move(PIdevs.fibY, distY(i));
+                    else
+                        error('fibY positions will collide with lens mount')
+                    end
                     
                     % Let femto voltage settle at new position
                     pause(Delay);
@@ -551,7 +550,7 @@ for a = 1:length(distVX)
             figure();
             colormap('gray');
             %Not sure why transpose and "axis xy" are needed for correct orient.
-            imagesc((distX-Xcenter),(distY-Ycenter),transpose(measScl2(:,:,:,k,a,b)));
+            imagesc((distX-Xcenter)*1e3,(distY-Ycenter)*1e3,transpose(measScl2(:,:,:,k,a,b)));
             titStr = sprintf('PWR Thru Fib, Z=%0.5f mm, vort=(%0.5f, %0.5f)', ...
                                 distZ(k), distVX(a), distVY(b));
             title(titStr)
@@ -559,8 +558,8 @@ for a = 1:length(distVX)
             cbr = colorbar;
             ylabel(cbr, 'Normed Coupling')
             set(gca,'TickDir','out')
-            xlabel('Fiber X position [mm]')
-            ylabel('Fiber Y position [mm]')
+            xlabel('Fiber X position [um]')
+            ylabel('Fiber Y position [um]')
             tag = sprintf('%ix%i',Xpoints,Ypoints);
             if k ~= 1
                 tag = sprintf([tag '_Foc%i'],k);
