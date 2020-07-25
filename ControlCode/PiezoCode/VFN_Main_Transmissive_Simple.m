@@ -172,8 +172,8 @@ VFN_setUpMDT;
 
 % Query MDT on each pertinent axis to ensure correct reads later
     % It seems the very first read after connection might be incorrect
-VFN_MDT_getPos(MDT, 'x')
-VFN_MDT_getPos(MDT, 'y')
+VFN_MDT_getPos(MDT, 'x');
+VFN_MDT_getPos(MDT, 'y');
 
 %% Femto setup
 fprintf('---Performing Femto Setup\n')
