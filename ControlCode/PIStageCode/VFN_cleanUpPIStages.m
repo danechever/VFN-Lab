@@ -10,7 +10,10 @@
 %% Close connection to all devices in the struct
 axs = fieldnames(PIdevs);
 for i = 1:numel(axs)
-    PIdevs.(axs{i}).CloseConnection();
+    if isa(PIdevs.(axs{i}), 'PI_GCS_Controller')
+        % Close connection to struct elements that are actual axes
+       PIdevs.(axs{i}).CloseConnection();
+    end
 end
 
 %% Unnload the dll and "destroy" the Controller object
