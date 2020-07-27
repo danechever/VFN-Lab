@@ -10,6 +10,12 @@
 %   As such, it will try to reconnect to the controllers even if already
 %   connected. This may cause issues.
 
+%% Stage Serial Numbers
+% Change these values if different controllers are connected
+EXPECTED_AXES = [119063717; ...
+                 119069544; ...
+                 119063721]; 
+
 %% Load PI MATLAB Driver GCS2
 %  (if not already loaded)
 addpath ( 'C:\Program Files (x86)\Physik Instrumente (PI)\Software Suite\MATLAB_Driver\' ); 
@@ -20,11 +26,6 @@ if ( ~exist ( 'Controller', 'var' ) || ~isa ( Controller, 'PI_GCS_Controller' ) 
     Controller = PI_GCS_Controller ();
 end
 
-%% Stage Serial Numbers
-% Change these values if different controllers are connected
-EXPECTED_AXES = [119063717; ...
-                 119069544; ...
-                 119063721]; 
 
 %% Find and validate available axes
 % List all E-873 stages available via USB

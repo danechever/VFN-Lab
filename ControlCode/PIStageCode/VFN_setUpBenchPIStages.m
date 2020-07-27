@@ -4,6 +4,7 @@
 % --> Turns on the servos (only on stages in "names" below)
 % --> Homes if needed (only for stages in "names" below)
 % --> Renames the stages in the workspace
+% --> Adds axis limits defined by user to PIdevs struct
 %
 % Any unrecognized stages (not in "names" below) are left unchanged
 
@@ -13,6 +14,13 @@ names = struct('AX_119063717', 'fibX', ...
                'AX_119063721', 'fibY', ...
                'AX_119069544', 'fibZ');
            
+%% Define Axis limits
+% Add limits as struct fields. 1st element is struct name, 2nd is limit
+    % Name should have the same prefix as above with a descriptive suffix
+limits = struct('fibY_upper', 3.8915, ...
+                'fibZ_lower', -12.455);
+
+
 %% Connect to PI stages
 VFN_setUpPIStages; 
            
@@ -42,5 +50,22 @@ for i = 1:numel(axs)
     end
 end
 
+%% Add axis limits if the given axis exists
+% Get all elements of limits struct to iterate through them
+lms = fieldnames(limits);
 
-clear('axs', 'ax', 'names', 'i')
+% Get all elements of PIdevs struct for reference
+axs = fieldnames(PIdevs);
+
+% Iterate through limits
+for i = 1:numel(lms)
+    lm = lms{i};
+    
+    if contains(lm,axs)
+        % An axis present in PIdevs matches the prefix for this limit
+            % Thus, add the limit to the PIdevs struct
+        PIdevs.(lm) = limits.(lm);
+    end
+end    
+
+clear('axs', 'ax', 'names', 'lms', 'lm', 'limits', 'i')
