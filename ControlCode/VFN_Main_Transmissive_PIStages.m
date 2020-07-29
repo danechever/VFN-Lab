@@ -288,7 +288,7 @@ for a = 1:length(distVX)
         end
 
        for k=1:length(distZ)
-            if (distZ(k) >= PIdevs.lower)
+            if (distZ(k) >= PIdevs.fibZ_lower)
                 VFN_PIStage_move(PIdevs.fibZ, distZ(k));
             else
                 error('fibZ positions will collide with lens mount')
@@ -304,7 +304,7 @@ for a = 1:length(distVX)
                 VFN_PIStage_move(PIdevs.fibX, distX(j));
                                 
                 for i=1:Ypoints+1
-                    if (distY(i) <= PIdevs.upper)
+                    if (distY(i) <= PIdevs.fibY_upper)
                         % Move fibY
                         VFN_PIStage_move(PIdevs.fibY, distY(i));
                     else
