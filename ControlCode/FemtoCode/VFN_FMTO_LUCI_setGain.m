@@ -1,28 +1,30 @@
-function code = VFN_FMTO_LUCI_setGain(FMTO_scale)
-% VFN_FMTO_setGain Function to change the Femto gain setting:
+function code = VFN_FMTO_LUCI_setGain(FMTO)
+% VFN_FMTO_LUCI_SETGAIN Function to change the Femto gain setting:
 %
-%   - FMTO_scale must be within the bounds of the power meter:
-%       [5 <= FMTO_scale <= 11]
+%   - FMTO.FMTO_scale must be within the bounds of the power meter:
+%       [5 <= FMTO.FMTO_scale <= 11]
 %
 %   - Assumes the gain setting is set to "high-speed" on the Femto
 %   
 %   - Returns the error code from the LUCI library
 %
 %   EXAMPLE:______
-%   ERROR_CODE = VFN_FMTO_setAutoGain(FMTO_scale)
-%       ERROR_CODE:          Error code when changing gain
-%       FMTO_scale: Desired scale setting defined by: 10^FMTO_scale
+%   code = VFN_FMTO_LUCI_SETGAIN(FMTO)
+%       code:       Error code when changing gain
+%       FMTO:       struct of Femto parameters. Needs field:
+%                   - FMTO_scale: Desired scale setting defined by 10^FMTO_scale
+
 verbose = false;
 %% Check Validity
 % Check that the commanded scale setting is within bounds
-if FMTO_scale < 5 || FMTO_scale > 11
+if FMTO.FMTO_scale < 5 || FMTO.FMTO_scale > 11
     % beyond bounds: throw error
-    error('Desired FMTO_scale is beyond bounds: %i', FMTO_scale)
+    error('Desired FMTO_scale is beyond bounds: %i', FMTO.FMTO_scale)
 end
 %% Perform change
 
 % Translate new gain setting to binary
-cmd = dec2bin(FMTO_scale-5,3);
+cmd = dec2bin(FMTO.FMTO_scale-5,3);
 
 %setting high speed mode, DC, gain 
 data_low = ['00001' cmd];
@@ -54,8 +56,4 @@ if verbose == true
     end
 end
 
-
-    
-% New gain setting is done; replicate original session
-%VFN_setUpFMTO
 end
