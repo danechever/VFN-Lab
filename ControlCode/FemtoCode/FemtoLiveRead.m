@@ -14,7 +14,7 @@ FMTO.gnFact  = 9.97;
 % Setup Femto 
 VFN_setUpFMTO;  
 
-VFN_FMTO_LUCI_setGain(FMTO);
+VFN_FMTO_setGain(FMTO);
 
 fprintf('Delay in use: %0.1f\n', Delay)
 fprintf('Current Gain setting: %i\n', FMTO.FMTO_scale)
@@ -25,19 +25,19 @@ end
 
 %% Read Femto
 for i = 1:totread
-    read    = startForeground(FMTO.s);
+    read    = VFN_FMTO_readN(FMTO);
     if FMTO.isAutoScale
         % Save old FMTO_scale for comparison after autoGain
         old_scale = FMTO.FMTO_scale;
         % Save old read value for comparison after autoGain
         old_read = mean(read);
         % Modify gain accordingly
-        FMTO = VFN_FMTO_LUCI_setAutoGain(FMTO, old_read);
+        FMTO = VFN_FMTO_setAutoGain(FMTO, old_read);
         % Check if re-read is needed
         if old_scale ~= FMTO.FMTO_scale
             % FMTO_scale changed so the gain changed
             fprintf('Femto gain was changed from %i to %i\n',old_scale, FMTO.FMTO_scale)
-            read    = startForeground(FMTO.s);
+            read    = VFN_FMTO_readN(FMTO);
             %ratio   = ratio * (old_read/mean(read));
             if FMTO.FMTO_scale > 9
                 warning('Gain >9: %i',FMTO.FMTO_scale)
