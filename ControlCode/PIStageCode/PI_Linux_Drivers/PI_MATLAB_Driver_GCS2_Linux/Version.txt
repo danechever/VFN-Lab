@@ -1,0 +1,12 @@
+MATLAB Driver for PI devices using GCS2
+
+Version: 1.3.2
+
+PI-Software Module ID: 68
+
+(c) 2002 - 2016 Physik Instrumente (PI) GmbH & Co. KG
+Auf der Roemerstr. 1
+76228 Karlsruhe, Germany      
+FAX: (+49)721-4846-2099
+EMail: support-software@pi.ws                             
+www.pi.ws

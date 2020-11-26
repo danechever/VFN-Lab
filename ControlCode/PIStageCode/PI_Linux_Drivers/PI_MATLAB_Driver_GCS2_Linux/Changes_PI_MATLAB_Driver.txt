@@ -1,0 +1,36 @@
+PI MATLAB Driver
+
+Changes introduced by version 1.3.1 (November 11, 2016)
+  * added:
+    - EnumerateTCPIPDevicesAsArray, ALLasArray
+	- Support for 7 new GCS-Commands: TGA, TGC, TGF, TGL?, TGS, TGT/TGT?
+
+Changes introduced by version 1.3.0 (August 11, 2016)
+  * new:
+	- Support for additional controllers:
+		- Hydra and Pollux
+		- C-843
+		- E-621, E-625, E-665, E-816 (64 bit MATLAB only)
+	- No additional C/C++ -compiler needed to use PI MATLAB Driver (neither 32bit nor 64bit)
+	- Speed up in PI MATLAB Driver load time
+	- support for new controller GCS 2 Commands
+  * fixed:
+	- Improved error message in connection functions (ConnectTCPIP, ConncectUSB, ConncectRS232)
+	- IsGeneratorRunning is now returning values (missing return values before)
+	- qGWD is now returning values (missing return values before)
+
+Changes introduced by version 1.2.6 (March 11, 2016)
+  * removed:
+    - EnumerateTCPIPDevicesAsArray.m
+	- EnumerateUSBAsArray.m
+	- GetAvailableDRRValues.m
+	- qSAI_ALLasArray.m
+	- qSAIasArray.m
+  * new:
+	- support for new controller GCS 2 commands
+  * changed:
+    - EnumerateTCPIPDevices returns data type "Cell"
+	- EnumerateUSB returns data type "Cell"
+  * fixed:
+	- Samples adopted to newest version of PI MATLAB Driver
+
