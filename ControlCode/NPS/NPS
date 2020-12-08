@@ -1,0 +1,155 @@
+#!/home/vfndev/anaconda3/envs/3.7/bin/python
+
+# standard python libraries
+import sys
+from time import sleep
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from configparser import ConfigParser
+
+# vfn libraries
+from NPS import NPS
+
+# exit if this script is not being used as command line
+if __name__ != "__main__": 
+    print("NPS not meant to be used as an import")
+    sys.exit()
+
+nps_config_file = "/home/vfndev/Documents/.NPS_config.ini"
+
+main_help = """----------------------------------------------------------
+Usage: NPS [CMD] [-h]
+----------------------------------------------------------
+CMD:
+{b:2}status  - displays status of given ports
+{b:2}on      - turns on selected ports
+{b:2}off     - turns off selected ports
+{b:2}devices - lists which ports devices are connected to
+-h:
+{b:2}add "-h" after a command for more info
+----------------------------------------------------------""".format(b="")
+
+# format examples for on
+on_addend = """
+examples:
+{b:2}NPS on 1
+{b:2}NPS on 3 2
+""".format(b="")
+
+# format examples for off
+off_addend = """
+examples:
+{b:2}NPS off 1
+{b:2}NPS off 3 7
+""".format(b="")
+
+# format examples for status
+stat_addend = """
+examples:
+{b:2}NPS status all
+{b:2}NPS status 3 8 1
+{b:2}NPS status
+""".format(b="")
+
+# change ArgumentParser so it prints help menu if no valid
+#   option is used
+class HelpArgumentParser(ArgumentParser):
+    def error(self, message):
+        if message.startswith("the following arguments are required:"):
+            self.print_help()
+        else:
+            print(main_help)
+        sys.exit()
+
+# create argument ArgumentParser
+parser = HelpArgumentParser(add_help = False)
+
+# add subparser so we can add input to our commands
+#   NOTE: dest allows us to check which subparser was invoked
+sub = parser.add_subparsers(dest = "command")
+
+# create subparser to handle status command
+stat = sub.add_parser("status", epilog = stat_addend,
+    formatter_class = RawDescriptionHelpFormatter)
+stat.add_argument("ports", nargs="*", 
+    help="any collection of valid port numbers ('all' or nothing for every port)")
+
+# create subparser to handle on command
+on = sub.add_parser("on", epilog = on_addend,
+    formatter_class = RawDescriptionHelpFormatter)
+on.add_argument("ports", nargs = "*",
+    help="any collection of valid port numbers")
+
+# create subparser to handle off command
+off = sub.add_parser("off", epilog = off_addend,
+    formatter_class = RawDescriptionHelpFormatter)
+off.add_argument("ports", nargs = "*",
+    help="any collection of valid port numbers")
+
+# create subparser to handle devices command
+dev = sub.add_parser("devices")
+
+args = parser.parse_args()
+
+# handle status command
+if args.command == "status":
+    # set up parameters for all
+    if len(args.ports) == 0 or "all" in args.ports:
+        args.ports = "all"
+    
+    # query NPS
+    with NPS() as nps:
+        try:
+            resp = nps.q_port(args.ports)
+
+            # print header
+            print("NPS status:")
+            print("------------")
+
+            for port in resp:
+                print("{:<5} | {}".format(str(port)+":", "On" if resp[port] else "Off"))
+        except ValueError:
+            print("Ports invalid. Type 'NPS devices' for valid ports")
+        except ConnectionError:
+            print("Trouble communicating with NPS. Please check that no other session is open.")
+
+    # exit
+    sys.exit()
+
+# handle on command
+elif args.command == "on":
+    # query NPS
+    with NPS() as nps:
+        try: nps.s_port({p:True for p in args.ports})
+        except ValueError:
+            print("Ports invalid. Type 'NPS devices' for valid ports")
+        except ConnectionError:
+            print("Trouble communicating with NPS. Please check that no other session is open.")
+        
+
+# handle off command
+elif args.command == "off":
+    # query NPS
+    with NPS() as nps:
+        try: nps.s_port({p:False for p in args.ports})
+        except ValueError:
+            print("Ports invalid. Type 'NPS devices' for valid ports")
+        except ConnectionError:
+            print("Trouble communicating with NPS. Please check that no other session is open.")
+
+# handle devices command
+elif args.command == "devices":
+
+    # device info is in the config file
+    cp = ConfigParser()
+    cp.read(nps_config_file)
+
+    # print header
+    print("NPS devices:")
+    print("------------")
+    # print out info for each port listed in the Port Info file
+    for port in cp.options("Port Info"):
+        print("Port {:<5} | {}".format(port+":", cp.get("Port Info", port)))
+
+# handle no command
+else:
+    print(main_help)
