@@ -4,7 +4,7 @@ Connection information as well as timeouts are saved at the file
     pointed to in the path variable below
 
 If this file is changed, please make sure to put it in the python path
-    for any environments that may use it (e.g. '/home/vfndev/anaconda3/envs/3.7/lib/python3.7')    
+    for any environments that may use it ('/home/vfndev/anaconda3/envs/{env name}/lib/python3.7')    
 """
 
 # python standard library
@@ -41,7 +41,7 @@ class NPS:
 
         # if there's only one element in the list, convert it to an int
         if type(port) is list and len(port) == 1:
-            try: port = int(port)
+            try: port = int(port[0])
             except ValueError: raise ValueError("List elements should be a number 1 through 8.")
 
         # if port is an int, there's only port to check, so check it
@@ -62,11 +62,17 @@ class NPS:
         elif type(port) is str and port.lower() == "all":
             port = [1, 2, 3, 4, 5, 6, 7, 8]
 
+        # if what remains isn't a list, throw an error
+        elif type(port) is not list:
+            raise ValueError("Please pass an int, a list of ints, or the string 'all'.")
+
         # a dictionary to hold the results
         res = {}
 
         # go through the ports, querying one by one
         for p in port:
+            try: p = int(p)
+            except ValueError: raise ValueError("Ports must be integers.")
             res[p] = self.q_port(p)[p]
 
         return res
@@ -82,8 +88,10 @@ class NPS:
 
         for port in requests:
             # check that port number is valid
-            if port not in range(1, 9):
-                raise ValueError("Ports must be between 1 and 8")
+            try:
+                if int(port) not in range(1, 9):
+                    raise ValueError("Ports must be between 1 and 8")
+            except ValueError: raise ValueError("Ports must be integers.")
 
             # check if request is on or off
             if requests[port]:
