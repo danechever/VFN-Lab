@@ -77,13 +77,13 @@ stat.add_argument("ports", nargs="*",
 on = sub.add_parser("on", epilog = on_addend,
     formatter_class = RawDescriptionHelpFormatter)
 on.add_argument("ports", nargs = "*",
-    help="any collection of valid port numbers")
+    help="any collection of valid port numbers (or 'all')")
 
 # create subparser to handle off command
 off = sub.add_parser("off", epilog = off_addend,
     formatter_class = RawDescriptionHelpFormatter)
 off.add_argument("ports", nargs = "*",
-    help="any collection of valid port numbers")
+    help="any collection of valid port numbers (or 'all')")
 
 # create subparser to handle devices command
 dev = sub.add_parser("devices")

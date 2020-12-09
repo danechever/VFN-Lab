@@ -81,16 +81,20 @@ class NPS:
         """Sets the given ports to on or off
 
         Args:
-            port = a dictionary where keys correspond to ports, and values are True/False for On/Off
+            requests = a dictionary where keys correspond to ports (or all), and values are True/False for On/Off
         Returns:
             None
         """
+
+        # if all off or all on was sent, reformat requests
+        if "all" in requests.keys():
+            requests = {port : requests["all"] for port in [1, 2, 3, 4, 5, 6, 7, 8]}
 
         for port in requests:
             # check that port number is valid
             try:
                 if int(port) not in range(1, 9):
-                    raise ValueError("Ports must be between 1 and 8")
+                    raise ValueError("Ports must be between 1 and 8 (or 'all')")
             except ValueError: raise ValueError("Ports must be integers.")
 
             # check if request is on or off
