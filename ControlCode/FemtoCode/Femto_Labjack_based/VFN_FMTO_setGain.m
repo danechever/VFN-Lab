@@ -19,7 +19,7 @@ if FMTO.FMTO_scale < 5 || FMTO.FMTO_scale > 11
     error('Desired FMTO_scale is beyond bounds: %i', FMTO.FMTO_scale)
 end
 
-gain_pin_dec_setting = gainscale - 5;
+gain_pin_dec_setting = FMTO.FMTO_scale - 5;
 gain_pin_bin_setting = dec2bin(gain_pin_dec_setting, 3);
 gain_pin_list = py.list();
 
@@ -30,7 +30,7 @@ end
 % append high speed gain setting
 gain_pin_list.append(int64(0)); 
 
-names = py.list({"FIO2", "FIO1", "FIO0", "FIO3"});
+names = py.list(FMTO.DIOPorts);
 numFrames = int64(length(names));
 
 py.labjack.ljm.eWriteNames(FMTO.LJ, numFrames, names, gain_pin_list);

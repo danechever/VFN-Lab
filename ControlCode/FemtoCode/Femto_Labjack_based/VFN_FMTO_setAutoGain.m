@@ -1,4 +1,4 @@
-function VFN_FMTO_setAutoGain(FMTO, readVal)
+function FMTO = VFN_FMTO_setAutoGain(FMTO, readVal)
 % VFN_FMTO_setAutoGain Function for automatically setting the gain:
 %   Takes in a power reading and changes the gain accordingly to ensure
 %   that future reads are within reasonable bounds on the Femto PM. If 
