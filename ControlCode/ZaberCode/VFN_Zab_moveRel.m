@@ -2,9 +2,12 @@ function resPos = VFN_Zab_moveRel(axis, step)
 % VFN_Zab_moveRel Function for performing a relative move with a Zaber axis
 %   Blocks execution until move completes
 %   
+% NOTE: If an out-of-range move is requested, the port will be closed and
+% you will need to reopen it.
+%
 %   EXAMPLE:______
 %   resPos = VFN_Zab_moveRel(axis, pos)
-%       axis:       Axis to home. Must be an instance of zaber.motion.ascii.Axis
+%       axis:       Axis to move. Must be an instance of zaber.motion.ascii.Axis
 %       step:       Size of relaitve move (in mm)
 %       resPos:     resulting position (in mm)
 

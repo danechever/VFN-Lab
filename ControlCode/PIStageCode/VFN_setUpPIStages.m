@@ -14,7 +14,7 @@
 %
 % In the end, you will be left with two variables needed for control:
 %   'Controller' = instance of controller object
-%   'PIdevs'     = struct with instances of device (USB Connection) objects
+%   'PIdevs'     = struct with instances of device objects
 %
 % NOTE: This code no longer checks if the controllers are already connected
 %   As such, it will try to reconnect to the controllers even if already

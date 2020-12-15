@@ -1,3 +1,14 @@
+% This will connect to the desired Zaber stages
+% It assumes all Zabers are daisy-chained and connected to a single USB
+%
+% NOTE: This script will home any Zabers that are unreferenced
+%
+% Note: the "port" variable is now contained in the "Zabs" struct
+% 
+% In the end, you will be left with a single variable needed for control:
+%   'Zabs'  = struct with instances of device objects
+%
+
 %% Imports and setup
 % Import Zaber objects
 import zaber.motion.Library;
@@ -24,12 +35,12 @@ EXPECTED_AXES = [51463, ...
 
 %%  Open serial port/connection
 % Use the zaber library to open the port
-port = Connection.openSerialPort('COM4');
+Zabs.port = Connection.openSerialPort('/dev/ttyZabers');
 
 %% Instantiate the Zaber Classes
 try
     % Find all connected devices
-    devs = port.detectDevices();
+    devs = Zabs.port.detectDevices();
     
     % Use device serial numbers to match axes and create instance in struct
     for i = 1:devs.length
@@ -50,6 +61,10 @@ try
     
     % Iterate through axes
     for i = 1:numel(axs)
+        if ~isa(Zabs.(axs{i}), 'zaber.motion.ascii.Axis')
+            % Skip non-zaber object fields (ie. port object)
+            continue
+        end
         if ~Zabs.(axs{i}).getSettings().get('limit.home.triggered')
             % Axis was not homed so home it
             Zabs.(axs{i}).home
@@ -59,7 +74,7 @@ try
     
 catch exception
     % Close port if an error occurs, otherwise it remains locked
-    port.close();
+    Zabs.port.close();
     fprintf('An error occurred, port was closed\n');
     rethrow(exception);
 end

@@ -2,9 +2,12 @@ function resPos = VFN_Zab_move(axis, pos)
 % VFN_Zab_move Function for moving a Zaber axis
 %   Blocks execution until move completes
 %
+% NOTE: If an out-of-range move is requested, the port will be closed and
+% you will need to reopen it.
+%
 %   EXAMPLE:______
 %   resPos = VFN_Zab_move(axis, pos)
-%       axis:       Axis to home. Must be an instance of zaber.motion.ascii.Axis
+%       axis:       Axis to move. Must be an instance of zaber.motion.ascii.Axis
 %       pos:        position to move to (in mm)
 %       resPos:     resulting position (in mm)
 
