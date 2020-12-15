@@ -11,7 +11,7 @@ If this file is changed, please make sure to put it in the python path
 from telnetlib import Telnet
 from configparser import ConfigParser
 
-nps_config_file = "/home/vfndev/Documents/.NPS_config.ini"
+nps_config_file = "/home/vfndev/Documents/MATLAB/VFN-Lab/VFN_Config/.NPS_config.ini"
 
 class NPS:
     """A class and context manager for telnet control of a Pulizzi"""

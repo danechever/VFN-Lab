@@ -14,7 +14,7 @@ if __name__ != "__main__":
     print("NPS not meant to be used as an import")
     sys.exit()
 
-nps_config_file = "/home/vfndev/Documents/.NPS_config.ini"
+nps_config_file = "/home/vfndev/Documents/MATLAB/VFN-Lab/VFN_Config/.NPS_config.ini"
 
 main_help = """----------------------------------------------------------
 Usage: NPS [CMD] [-h]
