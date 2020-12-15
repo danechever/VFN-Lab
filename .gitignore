@@ -15,3 +15,7 @@ ControlCode/ZaberCode/extern_ZaberLibrary/
 
 #-- Config/sensitive files not for the web
 VFN_Config/
+
+#-- Compiled files needed by PI driver
+ControlCode/PIStageCode/PI_Linux_Drivers/PI_MATLAB_Driver_GCS2_Linux/PI_GCS2_DLL_prototype_x64.m
+ControlCode/PIStageCode/PI_Linux_Drivers/PI_MATLAB_Driver_GCS2_Linux/PI_thunk_glnxa64.so
