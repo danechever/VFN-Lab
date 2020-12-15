@@ -12,3 +12,6 @@ ControlCode/ZaberCode/extern_ZaberLibrary/
 
 #-- Mac-specific stuff
 .DS_Store
+
+#-- Config/sensitive files not for the web
+VFN_Config/
