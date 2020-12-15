@@ -42,7 +42,7 @@ elseif strcmp(contype, 'tcp')
     %-- TCP/IP
     % TO USER: enter the requested IP addresses into the file below.
     %          Also modify path to this file as needed
-    flnm = '/home/vfndev/Documents/MATLAB/VFN-Lab/VFN_Config/VFN_PIStages_Q545_IPAdresses';
+    flnm = ['..' filesep '..' filesep 'VFN_Config' filesep 'VFN_PIStages_Q545_IPAdresses'];
     
     % Read IP addresses from file and convert to char array
     IPs = table2array(readtable(flnm, 'NumHeaderLines',1));
