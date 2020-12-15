@@ -99,6 +99,10 @@ if args.command == "status":
     # query NPS
     with NPS() as nps:
         try:
+            # device info is in the config file
+            cp = ConfigParser()
+            cp.read(nps_config_file)
+
             resp = nps.q_port(args.ports)
 
             # print header
@@ -106,7 +110,8 @@ if args.command == "status":
             print("------------")
 
             for port in resp:
-                print("{:<5} | {}".format(str(port)+":", "On" if resp[port] else "Off"))
+                print("{:<5} | {:<3} | {}".format(str(port)+":", "On" if resp[port] else "Off",
+                    cp.get("Port Info", str(port))))
         except ValueError:
             print("Ports invalid. Type 'NPS devices' for valid ports")
         except ConnectionError:
