@@ -4,10 +4,11 @@
 %- Attempts to automatically connect to first PM100D found by system
 %- Commented-out section allows manual entry of PM100D info
 %
-%* Attempts ot connect automatically on Windows or Linux
+%* Attempts to automatically load correctly library on Windows or Linux
 %
 %This uses the ThorlabsPM100 python library
 %- To install: https://github.com/clade/ThorlabsPM100
+% (For Windows:)
 %- Relies on PyVisa: https://pyvisa.readthedocs.io/en/stable/
 %- Also NI-VISA: https://www.ni.com/en-us/support/downloads/drivers/download.ni-visa.html#329456
 %
@@ -53,13 +54,13 @@ if ispc
 elseif isunix
     %-- Linux Machine detected. Act accordingly
     % Connect using USBTMC to default device (/dev/usbtmc0)
-    PM.inst = py.ThorlabsPM100.USBTMC();
+    % PM.inst = py.ThorlabsPM100.USBTMC();
     
 	% %-- If default USBTMC path fails, provide path here
-	% PM.inst = py.ThorlabsPM100.USBTMC(pyargs('device','/dev/usbtmc0'));
+	PM.inst = py.ThorlabsPM100.USBTMC(pyargs('device','/dev/ttyPM100D'));
     
     % Alias PM.rm to PM.inst so that cleanUp func. will work correctly
-    PM.rm = PM.inst;
+    % PM.rm = PM.inst;
 end
 
 % Instantiate device main comms object

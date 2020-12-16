@@ -1,6 +1,6 @@
-timerd  = 16*60;       % [min] Time for which reads should be done (approx)
+timerd  = 1;       % [min] Time for which reads should be done (approx)
 Nrate   = 50;       % number of measurements to average for each sample
-Delay   = 60;       % [s] Amount of time between samples
+Delay   = 5;       % [s] Amount of time between samples
 isplot  = true;     % Flag to plot full vector at end of run
 
 %% PM100D Setup
@@ -41,5 +41,5 @@ VFN_cleanUpPM100D;
 
 %% Plot results if needed
 if isplot
-    figure; plot(meas);
+    figure; plot(mean(meas,2));
 end
