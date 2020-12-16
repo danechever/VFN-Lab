@@ -17,5 +17,5 @@ for i = 1:numel(axs)
 end
 
 %% Unnload the dll and "destroy" the Controller object
-Controller.Destroy ();
-clear('axs', 'Controller', 'PIdevs', 'i')
+PIController.Destroy ();
+clear('axs', 'PIController', 'PIdevs', 'i')

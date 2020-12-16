@@ -42,7 +42,7 @@ elseif strcmp(contype, 'tcp')
     %-- TCP/IP
     % TO USER: enter the requested IP addresses into the file below.
     %          Also modify path to this file as needed
-    flnm = ['..' filesep '..' filesep 'VFN_Config' filesep 'VFN_PIStages_Q545_IPAdresses'];
+    flnm = ['..' filesep 'VFN_Config' filesep 'VFN_PIStages_Q545_IPAdresses'];
     
     % Read IP addresses from file and convert to char array
     IPs = table2array(readtable(flnm, 'NumHeaderLines',1));
@@ -66,12 +66,12 @@ elseif isunix
     %         holds this file. That is the case in the VFN-Lab git repo
 end
 
-clear pth
+clear pth flnm
 
 % The "controller" is actually the MATLAB driver. I kept the naming
 % convention from PI.
-if ( ~exist ( 'Controller', 'var' ) || ~isa ( Controller, 'PI_GCS_Controller' ) )
-    Controller = PI_GCS_Controller ();
+if ( ~exist ( 'Controller', 'var' ) || ~isa ( PIController, 'PI_GCS_Controller' ) )
+    PIController = PI_GCS_Controller ();
 end
 
 
@@ -79,7 +79,7 @@ end
 if strcmp(contype, 'usb')
     %-- USB
     % List all E-873 stages available via USB
-    devs = Controller.EnumerateUSB('E-873');
+    devs = PIController.EnumerateUSB('E-873');
     %- Check that all found stages are expected
     % Preallocate array with SNs
     SNs = strings(numel(devs),1);
@@ -109,7 +109,7 @@ if strcmp(contype, 'usb')
         % Create an entry in the PIdevs struct with the SN as the fieldname
         tag = sprintf('AX_%s', SNs(i));
         % Connect to controller 
-        PIdevs.(tag) = Controller.ConnectUSB(char(SNs(i)));
+        PIdevs.(tag) = PIController.ConnectUSB(char(SNs(i)));
     end
 elseif strcmp(contype, 'tcp')
     %-- TCP Connection
@@ -118,7 +118,7 @@ elseif strcmp(contype, 'tcp')
     % Iterate through provided IP addresses, connecting to each
     for i = 1:numel(IPs)
         % Connect to controller (assuming port=50000 as typical for PI)
-        tmpdev = Controller.ConnectTCPIP(IPs{i}, 50000);
+        tmpdev = PIController.ConnectTCPIP(IPs{i}, 50000);
         
         % Get serial number for PIdevs field name
         idn = strsplit(tmpdev.qIDN(), ',');
