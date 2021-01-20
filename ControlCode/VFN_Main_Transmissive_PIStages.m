@@ -19,7 +19,7 @@
     running the analysis code later (assuming same analysis params are used)
    - Full analysis (Fresnel losses, prop. losses, lens losses, etc.) is done.
  * Automatically prints values and results into the DataNotes file 
- * Uses the new control libraries for the VFN devices
+ * Uses the latest control libraries for the VFN devices
  * Calculates radially-averaged profile to determine proper planet coupling
  * Calculates rel. int. time using the null and the rad. avg. planet coupling 
    - Will optionally iterate through all frames and find the best rel. int.
@@ -43,33 +43,33 @@ clear all
 %% General settings 
 
 % Directory for saving data:
-svFld = 'C:\Users\Daniel Echeverri\Documents\TempVFNData\200722_COV4';
+svFld = '/media/Data_Drive/VFN/TestbedData/210120_COV6';
 
 %-- Experiment name for figures
-expNm = '24Don_785LasQuickCheck1';
+expNm = '2Don_635StartOfDay2';
 
 %-- Custom auto save text
 % Change at every run
-run_msg = 'Computer restarted last night. Check that code still runs.';
+run_msg = 'Increase scan resolution.';
 % Change when doing new set of experiments
-set_msg = 'Check bench performance after switching to PI FIU stage.';
-las_msg = 'Laser 785nm, 7.0mW.';   % Laser/Varia settings
+set_msg = 'Check that system is running well';
+las_msg = 'Laser 635nm, 2.5mW.';   % Laser/Varia settings
 flt_msg = 'N/A';                     % Optical Filter used
 vtx_msg = 'JPL Poly 550nm Charge 2';            % Vortex in use
 
 %-- Final analysis stuff
-isRadAvgAnalysis = true;    % calc rel. int. time in all frames using rad avg
+isRadAvgAnalysis = false;    % calc rel. int. time in all frames using rad avg
 
 %~~ ZABER STUFF 
 % Flag to enable vortex scan.
 isVortScan = false;
 
 % Distance to move zabers for backlash removal [in mm]
-zabBacklash= 0.040;         %Note: affects vortex and fiber z-axis
+zabBacklash = 0.040;         %Note: affects vortex
 
 % Vortex center of scan [in mm]
-VXcenter =  3.180000;       % 
-VYcenter = 14.030000;       %!! must be >9.9
+VXcenter =  2.944606;       % 
+VYcenter = 13.754100;       %
 
 % Vortex scan properties
 %To include center values as a point in scan; use ODD number of points
@@ -77,7 +77,7 @@ VXpoints = 3;           % Number of X points in scan
 VYpoints = VXpoints;    % Number of Y points in scan
 
 % Vortex step params in [mm]  
-vStepRange = min(0.015,0.8);   %Vortex will be scanned +/- this value
+vStepRange = 0.200; %Vortex will be scanned +/- this value
                     % ie. scan will be: 
                     % [VXcen-vStepRa to VXcen+vStepRa] w/ Vxpoi steps
 %~~ END ZABER STUFF 
@@ -85,13 +85,13 @@ vStepRange = min(0.015,0.8);   %Vortex will be scanned +/- this value
 %~~ PI STUFF 
 % Fiber Focus Scan properties
 %To include center value as a point; use ODD number of points
-Zcenter = -10.1800 ;     % Focus (Z) center point. !! must be < 9
-Zpoints = 1;            % Number of focci taken (exact number; no longer +1)
-ZStepSize = 0.002;      % Step size in mm
+Zcenter   = 9.5940;     % [mm] Focus (Z) center point
+Zpoints   = 1;           % Number of focci taken (exact number; no longer +1)
+ZStepSize = 0.01;      % Step size in mm
 
 % Fiber X/Y center of scan in mm
-Xcenter = -0.0110; % [mm]
-Ycenter =  2.2920; % [mm]
+Xcenter =  7.3760; % [mm]
+Ycenter =  7.1245; % [mm]
 
 % Fiber scan properties
 %To include center values as a point in scan; use EVEN number of points
@@ -99,16 +99,16 @@ Xpoints = 30;% number of X points in scan (actual scan will have +1)
 Ypoints = Xpoints; % Ycenter/Xcenter will be an extra point in the middle
 
 % Fiber step sizes in Volts
-refStep   = 10; % refStep is the step size for a full PSF with a 10*10 grid
+refStep   = 12; % refStep is the step size for a full PSF with a 10*10 grid
 StepSize  = refStep/(Xpoints/1e-3);
 %~~ END PIEZO STUFF 
 
 %~~ FEMTO POWER METER STUFF 
-isAutoScale = true; % If false, the gain is held fixed. Else, gain
+FMTO.isAutoScale = true; % If false, the gain is held fixed. Else, gain
                         % is set automatically using FMTO_setAutoGain()
-FMTO_scale = 6;     % Starting gain. the n in: 10^n for the gain setting
-Nread   = 100;      % power samples at a given locaiton
-Nrate   = 1000;     % rate of scan [samples/second]
+FMTO.FMTO_scale = 6;     % Starting gain. the n in: 10^n for the gain setting
+FMTO.Nread   = 100;      % power samples at a given locaiton
+%Nrate   = 1000;     % rate of scan [samples/second]
 % Add delay for settling time of detector
 % NOTE::: Chose arbitrary delay values for now
 Delay = 0.1;
@@ -126,12 +126,12 @@ isPMNorm = true;   % Flag to mark whether Thorlabs PM100D should be read
                         % system. -9999 will replace the pmRead values.
 % pmNormReport replaced with nrmValReport to reflect the fact that it is
     % representing the nrmVal variable, not pmRead1 anymore.
-nrmValReport = 1/44.1;   % @635nm typ = 14.08; @780nm typ = 44.1
+nrmValReport = 1;   % @635nm typ = 14.08; @780nm typ = 44.1
                         % Valu for fibertip power when isPMNorm=false. Only
                         % affects the printed values at end; NORM'd cube
                         % values are still un-normed. SET =1 to not norm
                         % the printed values.
-pmCalWvl = 785; % Wavelength for redPM for normalization
+pmCalWvl = 635; % Wavelength for redPM for normalization
 %~~ END RED (NORM) POWER METER STUFF
 
 %% Zaber Setup
@@ -147,7 +147,7 @@ VFN_setUpBenchZabers; % Instantiate and rename the zabers
 
 %- Make sure pmX is out of the way
 if isfield(Zabs, 'pmX')
-    VFN_Zab_move(Zabs.pmX, 25);
+    VFN_Zab_move(Zabs.pmX, Zabs.pmX_lower);
 elseif isPMNorm
     error('PM Norm is requested but no pmX Zaber exists.')
 end
@@ -172,15 +172,15 @@ VFN_setUpBenchPIStages;
 %% Femto setup
 fprintf('---Performing Femto Setup\n')
 % Define the gain to apply for scaling. Uses same gain for all: gnFact^(FMTO_scale-6)
-gnFact  = 9.97;
+FMTO.gnFact  = 9.97;
 
 % Setup Femto 
 VFN_setUpFMTO;  
 
 % Set FMTO gain to user-provided value (known start value for code)
-VFN_FMTO_LUCI_setGain(FMTO_scale);
+VFN_FMTO_setGain(FMTO);
 
-fprintf('Current Gain setting: %i\n', FMTO_scale)
+fprintf('Current Gain setting: %i\n', FMTO.FMTO_scale)
 
 %% Red Thorlabs PM setup
 fprintf('---Performing redPM Setup (if needed)\n')
@@ -219,9 +219,9 @@ trash = [Xcenter; Ycenter; Zcenter];
 fprintf(fileID, '        scan center    (%8.6f mm,%8.6f mm, %8.6f mm)\r\n', trash);
 trash = [Xpoints; Zpoints; refStep; refStep; Xpoints; ZStepSize];
 fprintf(fileID, '        Scan params:   xpoi = %d, zpoi = %d, refStep = %d, stepsize = %d/(%d/1e-3); zstep = %4.2f mm\r\n', trash);
-fprintf(fileID, '        isAutoScale:   %s\r\n', mat2str(isAutoScale));
-trash = [FMTO_scale; Nread; Nrate];
-fprintf(fileID, '        Femto:         FMTO_scale = %d; Nread = %d; Nrate = %d\r\n', trash);
+fprintf(fileID, '        isAutoScale:   %s\r\n', mat2str(FMTO.isAutoScale));
+trash = [FMTO.FMTO_scale; FMTO.Nread];
+fprintf(fileID, '        Femto:         FMTO_scale = %d; Nread = %d\r\n', trash);
 trash = [nrmValReport; pmCalWvl];
 fprintf(fileID, '        redPM norm:    isPMNorm = %s; nrmValReport = %5.2f; pmCalWavelength = %dnm\r\n', mat2str(isPMNorm), trash);
 fprintf(fileID, '        isMMFNorm: %s\r\n\r\n', mat2str(isMMFNorm));
@@ -252,10 +252,32 @@ if isVortScan && VYpoints > 1
 end
 
 %-- Preallocate data matrices
-meas= nan(length(distX),length(distY),Nread,length(distZ),length(distVX), length(distVY)); 
+meas= nan(length(distX),length(distY),FMTO.Nread,length(distZ),length(distVX), length(distVY)); 
 measScl = meas;         %Matrix for semi-processed data
 sclSz   = size(meas); sclSz(3) = 3;
 scales  = nan(sclSz);   %Matrix for scales, gains, and biases
+
+%% Check that stage limits will not be exceeded
+%-- Check zaber limits
+if (distVX(1)-zabBacklash < Zabs.vortX_lower) || (distVX(end) > Zabs.vortX_upper)
+    error('vortX motion will exceed limits')
+end
+if (distVY(1)-zabBacklash < Zabs.vortY_lower) || (distVY(end) > Zabs.vortY_upper)
+    error('vortY motion will exceed limits')
+end
+
+
+%-- Check PI limits
+if (distX(1) < PIdevs.fibX_lower) || (distX(end) > PIdevs.fibX_upper)
+    error('fibX motion will exceed limits')
+end
+if (distY(1) < PIdevs.fibY_lower) || (distY(end) > PIdevs.fibY_upper)
+    error('fibY motion will exceed limits')
+end
+if (distZ(1) < PIdevs.fibZ_lower) || (distZ(end) > PIdevs.fibZ_upper)
+    error('fibZ motion will exceed limits')
+end
+
 
 %% Perform scan
 
@@ -270,15 +292,9 @@ for a = 1:length(distVX)
     end
 
     %remove zaber (Y) backlash
-      % check for collisions first
-    if (distVY(1)-zabBacklash) >= 9.9
-        % VortY axis will not collide in the next move
-        if isZab && (distVY(1) ~= VFN_Zab_getPos(Zabs.vortY))
-            % Remove y backlash now that motion is confirmed safe
-            VFN_Zab_move(Zabs.vortY, distVY(1)-zabBacklash);
-        end
-    else
-        error('vortY position will collide with pmX')
+    if isZab && (distVY(1) ~= VFN_Zab_getPos(Zabs.vortY))
+        % Remove y backlash now that motion is confirmed safe
+        VFN_Zab_move(Zabs.vortY, distVY(1)-zabBacklash);
     end
     
     for b = 1:length(distVY)
@@ -287,12 +303,9 @@ for a = 1:length(distVX)
             fprintf('  VortY pos: %f\n',VFN_Zab_move(Zabs.vortY, distVY(b)));
         end
 
-       for k=1:length(distZ)
-            if (distZ(k) >= PIdevs.fibZ_lower)
-                VFN_PIStage_move(PIdevs.fibZ, distZ(k));
-            else
-                error('fibZ positions will collide with lens mount')
-            end
+        for k=1:length(distZ)
+            % Move fibZ
+            VFN_PIStage_move(PIdevs.fibZ, distZ(k));
                         
             for j=1:Xpoints+1
                 % Print current scan status
@@ -304,32 +317,28 @@ for a = 1:length(distVX)
                 VFN_PIStage_move(PIdevs.fibX, distX(j));
                                 
                 for i=1:Ypoints+1
-                    if (distY(i) <= PIdevs.fibY_upper)
-                        % Move fibY
-                        VFN_PIStage_move(PIdevs.fibY, distY(i));
-                    else
-                        error('fibY positions will collide with lens mount')
-                    end
+                    % Move fibY
+                    VFN_PIStage_move(PIdevs.fibY, distY(i));
                     
                     % Let femto voltage settle at new position
                     pause(Delay);
                                        
                     % Take a sample reading at current power
-                    read    = startForeground(s);
+                    read    = VFN_FMTO_readN(FMTO);
                     
                     % Perform auto scaling if desired
-                    if isAutoScale
+                    if FMTO.isAutoScale
                         % Save old FMTO_scale for comparison after autoGain
-                        old_scale = FMTO_scale;
+                        old_scale = FMTO.FMTO_scale;
                         % Modify gain accordingly
-                        [FMTO_scale, s] = VFN_FMTO_LUCI_setAutoGain(s, mean(read), FMTO_scale);
+                        FMTO = VFN_FMTO_setAutoGain(FMTO, mean(read));
                         % Check if re-read is needed
-                        if old_scale ~= FMTO_scale
+                        if old_scale ~= FMTO.FMTO_scale
                             % FMTO_scale changed so the gain changed
-                            fprintf('Femto gain was changed from %i to %i\n',old_scale, FMTO_scale)
-                            read    = startForeground(s);
-                            if FMTO_scale > 9
-                                warning('Gain >9: %i',FMTO_scale)
+                            fprintf('Femto gain was changed from %i to %i\n',old_scale, FMTO.FMTO_scale)
+                            read    = VFN_FMTO_readN(FMTO);
+                            if FMTO.FMTO_scale > 9
+                                warning('Gain >9: %i',FMTO.FMTO_scale)
                             end
                         end
                     end
@@ -339,11 +348,11 @@ for a = 1:length(distVX)
                     
                     % Store data
                     meas(j,i,:,k,a,b) = read;
-                    scales(j,i,1,k,a,b) = FMTO_scale;
-                    scales(j,i,2,k,a,b) = gnFact^-(FMTO_scale-6);
+                    scales(j,i,1,k,a,b) = FMTO.FMTO_scale;
+                    scales(j,i,2,k,a,b) = FMTO.gnFact^-(FMTO.FMTO_scale-6);
                     
                     % Get Bias at current gain setting
-                    locBias = VFN_FMTO_getBias(FMTO_scale);
+                    locBias = VFN_FMTO_getBias(FMTO.FMTO_scale);
                     
                     % Store bias data
                     scales(j,i,3,k,a,b) = locBias;
@@ -364,20 +373,20 @@ if isMMFNorm
     pause;
     %Now the MMF should be in the beam and can collect all the light
     %Use the femto to collect the total power, same as collecting data
-    mmf_read    = startForeground(s);
+    mmf_read    = VFN_FMTO_readN(FMTO);
     % Perform auto scaling if desired
-    if isAutoScale
+    if FMTO.isAutoScale
         % Save old FMTO_scale for comparison after autoGain
-        old_scale = FMTO_scale;
+        old_scale = FMTO.FMTO_scale;
         % Modify gain accordingly
-        [FMTO_scale, s] = VFN_FMTO_LUCI_setAutoGain(s, mean(mmf_read), FMTO_scale);
+        FMTO = VFN_FMTO_setAutoGain(FMTO, mean(mmf_read));
         % Check if re-read is needed
-        if old_scale ~= FMTO_scale
+        if old_scale ~= FMTO.FMTO_scale
             % FMTO_scale changed so the gain changed
-            fprintf('Femto gain was changed from %i to %i\n',old_scale, FMTO_scale)
-            mmf_read    = startForeground(s);
-            if FMTO_scale > 9
-                warning('Gain >9: %i',FMTO_scale)
+            fprintf('Femto gain was changed from %i to %i\n',old_scale, FMTO.FMTO_scale)
+            mmf_read    = VFN_FMTO_readN(FMTO);
+            if FMTO.FMTO_scale > 9
+                warning('Gain >9: %i',FMTO.FMTO_scale)
             end
         end
     end
@@ -386,22 +395,29 @@ if isMMFNorm
     end
     
     % Record femto gain setting during MMF read
-    MMF_FMTO_scale = FMTO_scale;    
+    MMF_FMTO_scale = FMTO.FMTO_scale;    
 else
     %-- Set mmf_read and MMF_FMTO_scale to -9999 if MMF is not used
-    mmf_read = ones(Nread,1)*-9999;
+    mmf_read = ones(FMTO.Nread,1)*-9999;
     MMF_FMTO_scale = -9999;
 end
 
 %-- Use the red power meter to measure the power
 if isPMNorm
     %-- Move redPM into the beam
-    % Check that no collisions will occur from motion
-    if VFN_Zab_getPos(Zabs.vortY) < 9.9
-        error('Vortex Y-Axis is in the way')
-    end
+    fprintf('\nredPM norm used. Moving fibZ...')
+    
+    %Move fiber stage out of the way to avoid collision with pmX
+    VFN_PIStage_move(PIdevs.fibZ, PIdevs.fibZ_lower);
+    fprintf('  fibZ at %0.2f',VFN_PIStage_getPos(PIdevs.fibZ))
+    
+    % Brief pause just to be safe
+    pause(2);
+    
     %Move if no collision
-    VFN_Zab_move(Zabs.pmX, 0);
+    fprintf('\nMoving pmX...')
+    VFN_Zab_move(Zabs.pmX, Zabs.pmX_upper);
+    fprintf(' Doing measurments...')
 
     %-- Read from red PM 
     % Wait for PM value to settle
@@ -439,24 +455,19 @@ if isPMNorm
         % If we get here, succeeded in reading so exit for-loop and proceed
         break
     end
+    
+    % Move redPM zaber, pmX, out of beam again
+    VFN_Zab_move(Zabs.pmX, Zabs.pmX_lower);
+    fprintf('\nDone. pmX moved to %0.2f',VFN_Zab_getPos(Zabs.pmX))
 else
     %-- Set pmRead to -9999 if PM is not to be read
     pmRead = ones(pmNread,1)*-9999;
 end
 
 %% close the connections to all devices
-% Set Femto back to 10^6 
-FMTO_scale = 6;
-VFN_FMTO_LUCI_setGain(FMTO_scale);
-fprintf('\n Femto Gain set to %i',FMTO_scale);
+% Clean up FMTO
 VFN_cleanUpFMTO;
-
-%Set PI stages to central position
-VFN_PIStage_move(PIdevs.fibX, Xcenter);
-VFN_PIStage_move(PIdevs.fibY, Ycenter);
-fprintf('\nfibZ pos: %f', VFN_PIStage_move(PIdevs.fibZ, Zcenter));
-% Close connection to the PI Stages
-VFN_cleanUpPIStages
+fprintf('\n Femto Gain set to %i',FMTO.FMTO_scale);
 
 if isZab
     %-- Return vortex to center position if needed
@@ -479,9 +490,9 @@ if isZab
         VFN_Zab_getPos(Zabs.vortY));
     
     
-    %-- Move Calibration PM out of the beam
+    %-- Move Calibration PM out of the beam (again; just to be safe)
     if isPMNorm
-        fprintf('  |  PM Zab pos: %f\n', VFN_Zab_move(Zabs.pmX, 25));
+        fprintf('  |  PM Zab pos: %f\n', VFN_Zab_move(Zabs.pmX, Zabs.pmX_lower));
     else
         fprintf('\n');  % terminate line from zaber recentering
     end
@@ -489,6 +500,13 @@ if isZab
     %-- Clean up
     VFN_cleanUpZabers;
 end
+
+%Set PI stages to central position
+VFN_PIStage_move(PIdevs.fibX, Xcenter);
+VFN_PIStage_move(PIdevs.fibY, Ycenter);
+fprintf('\nfibZ pos: %f', VFN_PIStage_move(PIdevs.fibZ, Zcenter));
+% Close connection to the PI Stages
+VFN_cleanUpPIStages
 
 %-- Disconnect from calibration PM
 if isPMNorm
@@ -508,16 +526,18 @@ PL = 0.9966;  % (1-loss) Fraction per meter of fiber
 %-- Define scaled matrix; equal to mean of meas unless gain was varied
 measScl = mean(measScl,3).*scales(:,:,2,:,:,:);
 
+%-- Get FMTO sensitivity at given wavelength
+fmtoSnsScl = VFN_getFmtoResponsivity(pmCalWvl);
+
 %-- Define a separate matrix which normalizes the data by power on the 
 if isPMNorm
     %-- When actual PM reading was done, normalize as usual
     % Account for loss from fiber lens
         % 3.4% reflection spec at 780nm, 0.3% reflection measured at 635nm
-    pmRead1 = mean(pmRead)*(1-0.034);%0.997;    % Updated on 2/8/19 based on 10/26/18
+    %pmRead1 = mean(pmRead)*(1-0.034);%0.997;    % Updated on 2/8/19 based on 10/26/18
     % Convert the calibration PM value from W to uW
-    pmRead1 = pmRead1*10^6;
+    pmRead1 = mean(pmRead)*10^6;
     % Translate the calibration PM value from uW to V (at 10^6)
-    fmtoSnsScl = VFN_getFmtoResponsivity(pmCalWvl);
     pmRead1 = pmRead1*fmtoSnsScl;     % V/uW conversion is ~ 0.63 @633; ~0.9 @ 780
     % Account for Fresnel and Propagation losses
     nrmVal = (1/pmRead1)*(1/(FL^2))*(1/(PL^2));
@@ -531,7 +551,7 @@ if isMMFNorm
     locBias = VFN_FMTO_getBias(MMF_FMTO_scale);
     mmf_norm = mmf_read-locBias;
     % Calculate gain factor and rescale accordingly
-    scl2 = gnFact^-(MMF_FMTO_scale-6);
+    scl2 = FMTO.gnFact^-(MMF_FMTO_scale-6);
     mmf_norm = mean(mmf_norm).*scl2;
     
     % Account only for propagation losses since fresnel losses will be present
@@ -604,7 +624,7 @@ fits.writeKey(fitmap, 'Zcenter ', Zcenter);
 fits.writeKey(fitmap, 'Zpoints ', Zpoints);
 fits.writeKey(fitmap, 'XYsteps ', StepSize);
 fits.writeKey(fitmap, 'Zsteps ',  ZStepSize);
-fits.writeKey(fitmap, 'Nread ',  Nread);
+fits.writeKey(fitmap, 'Nread ',  FMTO.Nread);
 fits.writeKey(fitmap, 'NAX1', 'XFiberCoord');
 fits.writeKey(fitmap, 'NAX2', 'YFiberCoord');
 fits.writeKey(fitmap, 'NAX3', 'Nread');
@@ -620,12 +640,12 @@ fits.writeKey(fitmap, 'VXpoints', VXpoints);
 fits.writeKey(fitmap, 'VYpoints', VYpoints);
 fits.writeKey(fitmap, 'vStepRng', vStepRange);
 % Power meter level
-fits.writeKey(fitmap, 'isAutScl', logical(isAutoScale));
-ind = strfind(GnCubeNm ,'\');
+fits.writeKey(fitmap, 'isAutScl', logical(FMTO.isAutoScale));
+ind = strfind(GnCubeNm ,filesep);
 fits.writeKey(fitmap, 'DatCube ', GnCubeNm(ind(end-1)+1:end));
-ind = strfind(SRCubeNm ,'\');
+ind = strfind(SRCubeNm ,filesep);
 fits.writeKey(fitmap, 'SRCube ', SRCubeNm(ind(end-1)+1:end));
-ind = strfind(NormCubeNm ,'\');
+ind = strfind(NormCubeNm ,filesep);
 fits.writeKey(fitmap, 'NormCube ', NormCubeNm(ind(end-1)+1:end));
 fits.writeKey(fitmap, 'NormFlag', logical(isPMNorm));
 fits.writeKey(fitmap, 'MMFFlag', logical(isMMFNorm));
@@ -648,7 +668,7 @@ fits.closeFile(fitmap);
 fitmap= fits.createFile(GnCubeNm);
 fits.createImg(fitmap,'double',size(permute(scales, permOrd)));
 %header data
-ind = strfind(datCubeNm,'\');
+ind = strfind(datCubeNm,filesep);
 fits.writeKey(fitmap, 'DatCube ', datCubeNm(ind(end-1)+1:end));
 fits.writeKey(fitmap, 'NAX1', 'XFiberCoord');
 fits.writeKey(fitmap, 'NAX2', 'YFiberCoord');
@@ -665,7 +685,7 @@ fits.closeFile(fitmap);
 fitmap= fits.createFile(SRCubeNm);
 fits.createImg(fitmap,'double',size(permute(measScl, permOrd)));
 %header data
-ind = strfind(datCubeNm,'\');
+ind = strfind(datCubeNm,filesep);
 fits.writeKey(fitmap, 'DatCube ', datCubeNm(ind(end-1)+1:end));
 fits.writeKey(fitmap, 'NAX1', 'XFiberCoord');
 fits.writeKey(fitmap, 'NAX2', 'YFiberCoord');
@@ -682,7 +702,7 @@ fits.closeFile(fitmap);
 fitmap= fits.createFile(NormCubeNm);
 fits.createImg(fitmap,'double',size(permute(measScl2,permOrd)));
 %header data
-ind = strfind(datCubeNm,'\');
+ind = strfind(datCubeNm,filesep);
 fits.writeKey(fitmap, 'DatCube ', datCubeNm(ind(end-1)+1:end));
 fits.writeKey(fitmap, 'NAX1', 'XFiberCoord');
 fits.writeKey(fitmap, 'NAX2', 'YFiberCoord');
