@@ -43,16 +43,16 @@ clear all
 %% General settings 
 
 % Directory for saving data:
-svFld = '/media/Data_Drive/VFN/TestbedData/210120_COV6';
+svFld = '/media/Data_Drive/VFN/TestbedData/210219_COV7';
 
 %-- Experiment name for figures
-expNm = '2Don_635StartOfDay2';
+expNm = '14PSF_635PSFOpt11';
 
 %-- Custom auto save text
 % Change at every run
-run_msg = 'Increase scan resolution.';
+run_msg = 'Repeat #13 to confirm';
 % Change when doing new set of experiments
-set_msg = 'Check that system is running well';
+set_msg = 'Optimize PSF coupling through side of vortex glass';
 las_msg = 'Laser 635nm, 2.5mW.';   % Laser/Varia settings
 flt_msg = 'N/A';                     % Optical Filter used
 vtx_msg = 'JPL Poly 550nm Charge 2';            % Vortex in use
@@ -68,16 +68,16 @@ isVortScan = false;
 zabBacklash = 0.040;         %Note: affects vortex
 
 % Vortex center of scan [in mm]
-VXcenter =  2.944606;       % 
-VYcenter = 13.754100;       %
+VXcenter =  2.946394;       % 
+VYcenter = 13.828012-6;       %
 
 % Vortex scan properties
 %To include center values as a point in scan; use ODD number of points
-VXpoints = 3;           % Number of X points in scan
+VXpoints = 1;           % Number of X points in scan
 VYpoints = VXpoints;    % Number of Y points in scan
 
 % Vortex step params in [mm]  
-vStepRange = 0.200; %Vortex will be scanned +/- this value
+vStepRange = 0.001; %Vortex will be scanned +/- this value
                     % ie. scan will be: 
                     % [VXcen-vStepRa to VXcen+vStepRa] w/ Vxpoi steps
 %~~ END ZABER STUFF 
@@ -85,21 +85,21 @@ vStepRange = 0.200; %Vortex will be scanned +/- this value
 %~~ PI STUFF 
 % Fiber Focus Scan properties
 %To include center value as a point; use ODD number of points
-Zcenter   = 9.5940;     % [mm] Focus (Z) center point
+Zcenter   = 9.509807;     % [mm] Focus (Z) center point
 Zpoints   = 1;           % Number of focci taken (exact number; no longer +1)
-ZStepSize = 0.01;      % Step size in mm
+ZStepSize = 0.001;      % Step size in mm
 
 % Fiber X/Y center of scan in mm
-Xcenter =  7.3760; % [mm]
-Ycenter =  7.1245; % [mm]
+Xcenter =  7.375657; % [mm]
+Ycenter =  7.096191; % [mm]
 
 % Fiber scan properties
 %To include center values as a point in scan; use EVEN number of points
-Xpoints = 30;% number of X points in scan (actual scan will have +1)
+Xpoints = 25;% number of X points in scan (actual scan will have +1)
 Ypoints = Xpoints; % Ycenter/Xcenter will be an extra point in the middle
 
 % Fiber step sizes in Volts
-refStep   = 12; % refStep is the step size for a full PSF with a 10*10 grid
+refStep   = 6; % refStep is the step size for a full PSF with a 10*10 grid
 StepSize  = refStep/(Xpoints/1e-3);
 %~~ END PIEZO STUFF 
 
@@ -527,7 +527,8 @@ PL = 0.9966;  % (1-loss) Fraction per meter of fiber
 measScl = mean(measScl,3).*scales(:,:,2,:,:,:);
 
 %-- Get FMTO sensitivity at given wavelength
-fmtoSnsScl = VFN_getFmtoResponsivity(pmCalWvl);
+%fmtoSnsScl = VFN_getFmtoResponsivity(pmCalWvl);
+fmtoSnsScl = 0.62; % value from manual comparison
 
 %-- Define a separate matrix which normalizes the data by power on the 
 if isPMNorm
@@ -734,13 +735,13 @@ end
 %-- Find null in central region
 cropVal = 7;
 [mnVal, mnInd] = VFN_An_getEta_s(measScl, cropVal);
-fprintf('\nMin in center region:    %f',mnVal)
+fprintf('\nMin in center region (un-normed): %f',mnVal)
 fprintf(['\n Min Location: ', ...
-         '\n  X index = %3i, X   = %0.6f     mm', ...
-         '\n  Y index = %3i, Y   = %0.6f     mm', ...
-         '\n  Foc ind = %3i, Foc =   %0.6f  mm', ...
-         '\n  VX ind  = %3i, VX  =  %0.6f mm', ...
-         '\n  VY ind  = %3i, VY  =  %0.6f mm'], ...
+         '\n  X index = %3i, X   =  %09.6f mm', ...
+         '\n  Y index = %3i, Y   =  %09.6f mm', ...
+         '\n  Foc ind = %3i, Foc =  %09.6f mm', ...
+         '\n  VX ind  = %3i, VX  =  %09.6f mm', ...
+         '\n  VY ind  = %3i, VY  =  %09.6f mm'], ...
          mnInd(1), distX(mnInd(1)), mnInd(2), distY(mnInd(2)), ...
          mnInd(4), distZ(mnInd(4)), mnInd(5), distVX(mnInd(5)), ...
          mnInd(6), distVY(mnInd(6)));
@@ -748,15 +749,15 @@ fprintf(['\n Min Location: ', ...
 
 %-- Find overall max
 [mxVal2, mxInd2] = VFN_An_getEta_p(measScl);
-fprintf('\nOverall Max:             %f',mxVal2)
+fprintf('\nOverall Max (un-normed):          %f',mxVal2)
 fprintf('\n Overall Max Location: (%i, %i, %i, %i, %i, %i)', ...
         mxInd2(1), mxInd2(2), mxInd2(3), mxInd2(4), mxInd2(5), mxInd2(6));
     
 %-- Find max in frame with min value
 meas3 = measScl(:,:, mnInd(3), mnInd(4), mnInd(5), mnInd(6)); %Frame with min
 mxVal = max(meas3(:)); 
-fprintf('\nMax in min Frame:        %f', mxVal)
-fprintf('\nMax/Min, min Frame: %f', mxVal/mnVal)
+fprintf('\nMax in min Frame (un-normed):     %f', mxVal)
+fprintf('\nMax/Min, min Frame (un-normed):   %f', mxVal/mnVal)
 if ~(isPMNorm || isMMFNorm)
     fprintf('\nWARN: redPM not used; fib tip power provided by user');
 end
@@ -766,8 +767,8 @@ eta_s = mnVal*nrmVal;
 eta_p = mxVal*nrmVal;
 
 fprintf('\nPower on Fiber tip:      %f', 1/nrmVal);
-fprintf('\nMin, normed (eta_s):  %f', eta_s);
-fprintf('\nMax, normed (eta_p):  %f\n', eta_p);
+fprintf('\nMin, normed (eta_s):     %f', eta_s);
+fprintf('\nMax, normed (eta_p):     %f\n', eta_p);
 
 if ~sum(strfind(expNm, 'PSF'))
     % Assume we are analyzing a donut
@@ -802,15 +803,15 @@ if ~sum(strfind(expNm, 'PSF'))
 else
     % Analysing the PSF
     fprintf(['\n Max Location: ', ...
-        '\n  X index = %3i, X   = %0.6f     mm', ...
-        '\n  Y index = %3i, Y   = %0.6f     mm', ...
+        '\n  X index = %3i, X   =   %0.6f     mm', ...
+        '\n  Y index = %3i, Y   =   %0.6f     mm', ...
         '\n  Foc ind = %3i, Foc =   %0.6f  mm', ...
-        '\n  VX ind  = %3i, VX  =  %0.6f mm', ...
-        '\n  VY ind  = %3i, VY  =  %0.6f mm'], ...
+        '\n  VX ind  = %3i, VX  =   %0.6f mm', ...
+        '\n  VY ind  = %3i, VY  =   %0.6f mm'], ...
         mxInd2(1), distX(mxInd2(1)), mxInd2(2), distY(mxInd2(2)), ...
         mxInd2(4), distZ(mxInd2(4)), mxInd2(5), distVX(mxInd2(5)), mxInd2(6), distVY(mxInd2(6)));
     
-    fprintf('\n\n- Max:                        %f', mxVal2)
+    fprintf('\n\n- Max (un-normed):            %f', mxVal2)
     fprintf('\n- Power on Fiber tip:         %f', 1/nrmVal)
     fprintf('\n- Max, normed (coupling):     %f\n', mxVal2*nrmVal)
     % Automated DataNotes
