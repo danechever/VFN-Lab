@@ -1,4 +1,4 @@
-% This will connect to the desired PI stages (via USB or Ethernet)
+% This will connect to the desired PI stages (via USB, Ethernet, or RS232+Ethernet)
 %  - User selects connection type at top of this script
 % It assumes only a single axis is connected per controller
 % It assumes the single axis on all controllers is called '1'
@@ -12,6 +12,11 @@
 % NOTE: User must provide IPs in the requested text (see code below) 
 %       This is to avoid putting our IPs on GIT
 %
+% The RS232+TCP mode connects to some controllers via RS232 and some via
+% Ethernet. User must provide IP addresses the same way as with the normal
+% TCP mode. User must also provide devnames (or comports) in the top
+% section as done for the USB mode.
+%
 % In the end, you will be left with two variables needed for control:
 %   'Controller' = instance of controller object
 %   'PIdevs'     = struct with instances of device objects
@@ -24,7 +29,7 @@
 % Change these values to change the connection type 
 
 %-- Choose type ("usb" or "tcp")
-contype = 'tcp';
+contype = 'tcp+rs232';
 
 
 %Make sure contype is lowercase
@@ -46,6 +51,23 @@ elseif strcmp(contype, 'tcp')
     
     % Read IP addresses from file and convert to char array
     IPs = table2array(readtable(flnm, 'NumHeaderLines',1));
+elseif strcmp(contype, 'tcp+rs232')
+    %-- Some stages on TCP/IP and others on rs232
+    % TO USER: enter the requested IP addresses into the file below.
+    %          Also modify path to this file as needed
+    flnm = ['..' filesep 'VFN_Config' filesep 'VFN_PIStages_Q545_IPAdresses'];
+    
+    % Read IP addresses from file and convert to char array
+    IPs = table2array(readtable(flnm, 'NumHeaderLines',1));
+    
+    
+    % TO USER: enter the devname (COM Port)
+        % When on Windos: use integers instead of strings.
+        % Ex: Linux: {'/dev/ttyUSB4'}, Windows: {1}
+    RS232.devnames    = {'/dev/ttyUSB4'};
+    % TO USER: enter the SN for RS232 stages here
+        % Enter as a vector, even if only 1 stage
+    RS232.ExpectedSns = [119063717];
 else 
     %-- unrecognized contype
     error('Invalid connection type "contype"')
@@ -129,9 +151,54 @@ elseif strcmp(contype, 'tcp')
         % Connect to controller 
         PIdevs.(tag) = tmpdev;
     end
+elseif strcmp(contype, 'tcp+rs232')
+    %-- Some stages on TCP/IP and others on rs232
+    %Preallocate array with SNs
+    SNs = strings(numel(IPs)+numel(RS232.devnames),1);
+    
+    % Iterate through provided IP addresses, connecting to each
+    for i = 1:numel(IPs)
+        % Connect to controller (assuming port=50000 as typical for PI)
+        tmpdev = PIController.ConnectTCPIP(IPs{i}, 50000);
+        
+        % Get serial number for PIdevs field name
+        idn = strsplit(tmpdev.qIDN(), ',');
+        SNs(i) = num2str(sscanf(idn{3}, '%d'));
+        
+        % Create an entry in the PIdevs struct with the SN as the fieldname
+        tag = sprintf('AX_%s', SNs(i));
+        % Connect to controller 
+        PIdevs.(tag) = tmpdev;
+    end
+    
+    % Iterate through provided USB ports
+    for j = 1:numel(RS232.devnames)
+        % Connect to the provided USB port (Assuming baud=115200)
+        if isunix
+            % Use the special linux function that takes in string devnames
+            tmpdev = PIController.ConnectRS232ByDevName(RS232.devnames{j}, 115200 );
+        elseif ispc
+            % Use the general function that takes in integers
+            tmpdev = PIController.ConnectRS232(RS232.devnames{j},115200);
+        end
+        
+        % Get serial number
+        idn = strsplit(tmpdev.qIDN(), ',');
+        SNs(numel(IPs)+j) = num2str(sscanf(idn{3}, '%d'));
+        
+        % Check that this SN was expected
+        if ~ismember(SNs(numel(IPs)+j), num2str(RS232.ExpectedSns))
+            error('An unrecgonized PI E-873 Controller was found: SN %s', SNs(numel(IPs)+j))
+        end
+        
+        % Create an entry in the PIdevs struct with the SN as the fieldname
+        tag = sprintf('AX_%s', SNs(numel(IPs)+j));
+        % Connect to controller 
+        PIdevs.(tag) = tmpdev;
+    end
 end
 
-clear tag tmpdev idn IPs
+clear tag tmpdev idn IPs RS232
     
 % Get all the available axes names
 axs = fieldnames(PIdevs);
@@ -167,4 +234,4 @@ for i = 1:numel(axs)
 end
 
 %% Show connected stages
-clear axs devs SNs i contype
+clear axs devs SNs i j contype

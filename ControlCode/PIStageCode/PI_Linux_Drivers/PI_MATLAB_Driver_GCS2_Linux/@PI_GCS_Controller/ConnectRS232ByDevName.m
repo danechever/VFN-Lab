@@ -1,4 +1,4 @@
-function c = PI_ConnectRS232ByDevName(c, deviceName, baudRate)
+function c = ConnectRS232ByDevName(c, deviceName, baudRate)
 % Open an RS-232 interface to a controller with Linux.
 % 
 %   SYNTAX 
