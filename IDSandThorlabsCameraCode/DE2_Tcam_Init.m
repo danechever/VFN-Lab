@@ -17,6 +17,8 @@ Script to initialize Thorlabs (DCC 1545m) camera.
 ******************************************************
 - Arguments:
     expTime         exposure time for captures, in ms
+    cam_id          the id of the camera to connect to (0-254)
+                        default = 0: first camera found
 
 - Returns:
     cam             Data structure containing camera instance; must be
@@ -32,7 +34,13 @@ Initial Version:    Daniel Echeverri, 10/24/2017
 Last Edit:          Daniel Echeverri
 Last Modified:      11/05/2017
 %}
-function [cam, img] = DE2_Tcam_Init(expTime)
+function [cam, img] = DE2_Tcam_Init(expTime, cam_id)
+
+    % define camera as first one if no camera was specified
+    if (~exist('cam_id', 'var'))
+        cam_id=0;
+    end
+    
     %Check if assembly is present. Import Otherwise
     %May need to change search location if library is moved
     asm = System.AppDomain.CurrentDomain.GetAssemblies;
@@ -46,8 +54,10 @@ function [cam, img] = DE2_Tcam_Init(expTime)
     %Create CCD object handle
     cam = uc480.Camera();
 
-    %Open and connect to first camera: 0 = 1st cam
-    char(cam.Init(0));
+    %Open and connect to the desired camera:
+    %   0 = 1st cam
+    %   see DCx Camera Manager for ids (and to set ids)
+    char(cam.Init(cam_id));
 
     %Set display mode to bitmap (DiB); Captured to RAM
     if ~strcmp(char(cam.Display.Mode.Set(uc480.Defines.DisplayMode.DiB)), ...
