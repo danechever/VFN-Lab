@@ -43,22 +43,22 @@ clear all
 %% General settings 
 
 % Directory for saving data:
-svFld = '/media/Data_Drive/VFN/TestbedData/210219_COV7';
+svFld = '/media/Data_Drive/VFN/TestbedData/210428_COV8';
 
 %-- Experiment name for figures
-expNm = '14PSF_635PSFOpt11';
+expNm = '210Don_635XPolPoly3';
 
 %-- Custom auto save text
 % Change at every run
-run_msg = 'Repeat #13 to confirm';
+run_msg = 'Smaller focus scan to see if striping is gone.';
 % Change when doing new set of experiments
-set_msg = 'Optimize PSF coupling through side of vortex glass';
-las_msg = 'Laser 635nm, 2.5mW.';   % Laser/Varia settings
-flt_msg = 'N/A';                     % Optical Filter used
+set_msg = 'Testing polarized system in 10nm BW light.';
+las_msg = 'superK Compact 100%.';   % Laser/Varia settings
+flt_msg = '650x10nm';                     % Optical Filter used
 vtx_msg = 'JPL Poly 550nm Charge 2';            % Vortex in use
 
 %-- Final analysis stuff
-isRadAvgAnalysis = false;    % calc rel. int. time in all frames using rad avg
+isRadAvgAnalysis = true;    % calc rel. int. time in all frames using rad avg
 
 %~~ ZABER STUFF 
 % Flag to enable vortex scan.
@@ -68,8 +68,8 @@ isVortScan = false;
 zabBacklash = 0.040;         %Note: affects vortex
 
 % Vortex center of scan [in mm]
-VXcenter =  2.946394;       % 
-VYcenter = 13.828012-6;       %
+VXcenter =  2.834394;       % 
+VYcenter = 14.034012;       %13.828012-6 (5.8410 is min if X is at 2.8444)
 
 % Vortex scan properties
 %To include center values as a point in scan; use ODD number of points
@@ -77,7 +77,7 @@ VXpoints = 1;           % Number of X points in scan
 VYpoints = VXpoints;    % Number of Y points in scan
 
 % Vortex step params in [mm]  
-vStepRange = 0.001; %Vortex will be scanned +/- this value
+vStepRange = 0.007; %Vortex will be scanned +/- this value
                     % ie. scan will be: 
                     % [VXcen-vStepRa to VXcen+vStepRa] w/ Vxpoi steps
 %~~ END ZABER STUFF 
@@ -85,21 +85,21 @@ vStepRange = 0.001; %Vortex will be scanned +/- this value
 %~~ PI STUFF 
 % Fiber Focus Scan properties
 %To include center value as a point; use ODD number of points
-Zcenter   = 9.509807;     % [mm] Focus (Z) center point
-Zpoints   = 1;           % Number of focci taken (exact number; no longer +1)
-ZStepSize = 0.001;      % Step size in mm
+Zcenter   = 9.500606;% MMF: 9.193358;  % [mm] Focus (Z) center point
+Zpoints   = 3;           % Number of focci taken (exact number; no longer +1)
+ZStepSize = 0.015;      % Step size in mm
 
 % Fiber X/Y center of scan in mm
-Xcenter =  7.375657; % [mm]
-Ycenter =  7.096191; % [mm]
+Xcenter = 7.383734;% MMF: 7.405309;  % [mm]
+Ycenter = 7.091133;% MMF: -9.856926; % [mm]
 
 % Fiber scan properties
 %To include center values as a point in scan; use EVEN number of points
-Xpoints = 25;% number of X points in scan (actual scan will have +1)
+Xpoints = 24;% number of X points in scan (actual scan will have +1)
 Ypoints = Xpoints; % Ycenter/Xcenter will be an extra point in the middle
 
 % Fiber step sizes in Volts
-refStep   = 6; % refStep is the step size for a full PSF with a 10*10 grid
+refStep   = 14; % refStep is the step size for a full PSF with a 10*10 grid
 StepSize  = refStep/(Xpoints/1e-3);
 %~~ END PIEZO STUFF 
 
@@ -131,7 +131,7 @@ nrmValReport = 1;   % @635nm typ = 14.08; @780nm typ = 44.1
                         % affects the printed values at end; NORM'd cube
                         % values are still un-normed. SET =1 to not norm
                         % the printed values.
-pmCalWvl = 635; % Wavelength for redPM for normalization
+pmCalWvl = 650; % Wavelength for redPM for normalization
 %~~ END RED (NORM) POWER METER STUFF
 
 %% Zaber Setup
@@ -218,7 +218,7 @@ fprintf(fileID, '        Vortex Mask:   %s\r\n', vtx_msg);
 trash = [Xcenter; Ycenter; Zcenter];
 fprintf(fileID, '        scan center    (%8.6f mm,%8.6f mm, %8.6f mm)\r\n', trash);
 trash = [Xpoints; Zpoints; refStep; refStep; Xpoints; ZStepSize];
-fprintf(fileID, '        Scan params:   xpoi = %d, zpoi = %d, refStep = %d, stepsize = %d/(%d/1e-3); zstep = %4.2f mm\r\n', trash);
+fprintf(fileID, '        Scan params:   xpoi = %d, zpoi = %d, refStep = %d, stepsize = %d/(%d/1e-3); zstep = %5.3f mm\r\n', trash);
 fprintf(fileID, '        isAutoScale:   %s\r\n', mat2str(FMTO.isAutoScale));
 trash = [FMTO.FMTO_scale; FMTO.Nread];
 fprintf(fileID, '        Femto:         FMTO_scale = %d; Nread = %d\r\n', trash);
@@ -256,6 +256,7 @@ meas= nan(length(distX),length(distY),FMTO.Nread,length(distZ),length(distVX), l
 measScl = meas;         %Matrix for semi-processed data
 sclSz   = size(meas); sclSz(3) = 3;
 scales  = nan(sclSz);   %Matrix for scales, gains, and biases
+%fibPos = scales;        %Matrix for fiber positions (x,y,z)
 
 %% Check that stage limits will not be exceeded
 %-- Check zaber limits
@@ -346,6 +347,11 @@ for a = 1:length(distVX)
                         warning('Power is too high')
                     end
                     
+                    % Save fiber positions
+                    %fibPos(j,i,1) = VFN_PIStage_getPos(PIdevs.fibX);
+                    %fibPos(j,i,2) = VFN_PIStage_getPos(PIdevs.fibY);
+                    %fibPos(j,i,3) = VFN_PIStage_getPos(PIdevs.fibZ);
+
                     % Store data
                     meas(j,i,:,k,a,b) = read;
                     scales(j,i,1,k,a,b) = FMTO.FMTO_scale;
@@ -872,5 +878,12 @@ fclose(fileID);
 fprintf('\nFull rel. tint. matrix\n')
 relTints = permute(relTints, [3 2 1]);
 disp(relTints);
+
+% (OPTIONAL) print the min and max in each frame
+% fprintf('\nFull mins matrix\n')
+% disp(permute(radMns,[3,2,1]));
+% 
+% fprintf('\nFull maxs matrix\n')
+% disp(permute(radMxs,[3,2,1]))
 
 end
