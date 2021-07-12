@@ -9,7 +9,8 @@
     % This takes advantage of the MATLAB logical short-circuiting 
 if ~exist('NKT', 'var') || ~isfield(NKT, 'CONNECTED') || ~NKT.CONNECTED
     
-    NKT_lib_PATH = 'C:\Users\AOlab1\Desktop\DE2\VFN\VFN-Lab\ControlCode\NKTCode\';
+    %NKT_lib_PATH = 'C:\Users\AOlab1\Desktop\DE2\VFN\VFN-Lab\ControlCode\NKTCode\';
+    NKT_lib_PATH = '/home/vfndev/Documents/MATLAB/VFN-Lab/ControlCode/NKTCode/';
     if count(py.sys.path, NKT_lib_PATH) == 0
         insert(py.sys.path, int32(0), NKT_lib_PATH);
     end
@@ -20,7 +21,9 @@ if ~exist('NKT', 'var') || ~isfield(NKT, 'CONNECTED') || ~NKT.CONNECTED
     disp('*** Connecting to NKT ... ***');
     
     % Create Nkt object using nkt_mod.py
-    NKT.nktobj = py.nkt_mod_falco.Nkt('COM6',115200);%115200%
+      %NOTE: if one doesnt work, try the other
+    %NKT.nktobj = py.nkt_mod_falco_py3.Nkt('/dev/ttyUSB5',115200);%115200%
+     NKT.nktobj = py.nkt_mod_falco.Nkt('/dev/ttyUSB5',115200);%115200%
     
     NKT.CONNECTED = true;
     

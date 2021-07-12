@@ -89,7 +89,7 @@ def comm_close(fd):
     try:
         fd.close()
     except (serial.SerialException) as e:
-        print 'Unable to close file'
+        print('Unable to close file')
 
 def validate_ip(s):
     """ Validates whether input parameter s is a valid ip address
@@ -111,36 +111,36 @@ def get_bit(val, idx):
 def print_statusbits(status_val):
     """ This function takes a 16 bit input and prints an interpretation of each status bit.
     """
-    print "Status Bits:"
-    print "    Emission LED on:            " + ("TRUE" if get_bit(status_val,0) else "FALSE")
-    print "    Interlock off:              " + ("TRUE" if get_bit(status_val,1) else "FALSE")
-    print "    Interlock power failure:    " + ("TRUE" if get_bit(status_val,2) else "FALSE")
-    print "    Interlock loop off:         " + ("TRUE" if get_bit(status_val,3) else "FALSE")
-    print "    External disable:           " + ("TRUE" if get_bit(status_val,4) else "FALSE")
-    print "    Supply voltage low:         " + ("TRUE" if get_bit(status_val,5) else "FALSE")
-    print "    Module temp range:          " + ("TRUE" if get_bit(status_val,6) else "FALSE")
-    print "    USB log error code present: " + ("TRUE" if get_bit(status_val,14) else "FALSE")
-    print "    Error code present:         " + ("TRUE" if get_bit(status_val,15) else "FALSE")
+    print("Status Bits:")
+    print("    Emission LED on:            " + ("TRUE" if get_bit(status_val,0) else "FALSE"))
+    print("    Interlock off:              " + ("TRUE" if get_bit(status_val,1) else "FALSE"))
+    print("    Interlock power failure:    " + ("TRUE" if get_bit(status_val,2) else "FALSE"))
+    print("    Interlock loop off:         " + ("TRUE" if get_bit(status_val,3) else "FALSE"))
+    print("    External disable:           " + ("TRUE" if get_bit(status_val,4) else "FALSE"))
+    print("    Supply voltage low:         " + ("TRUE" if get_bit(status_val,5) else "FALSE"))
+    print("    Module temp range:          " + ("TRUE" if get_bit(status_val,6) else "FALSE"))
+    print("    USB log error code present: " + ("TRUE" if get_bit(status_val,14) else "FALSE"))
+    print("    Error code present:         " + ("TRUE" if get_bit(status_val,15) else "FALSE"))
     return
 
 def print_varia_statusbits(status_val):
-    print "VARIA Status Bits:"
-    print "    -                 :         " + ("TRUE" if get_bit(status_val,0) else "FALSE")
-    print "    Interlock off     :         " + ("TRUE" if get_bit(status_val,1) else "FALSE")
-    print "    Interlock loop in :         " + ("TRUE" if get_bit(status_val,2) else "FALSE")
-    print "    Interlock loop out:         " + ("TRUE" if get_bit(status_val,3) else "FALSE")
-    print "    -                 :         " + ("TRUE" if get_bit(status_val,4) else "FALSE")
-    print "    Supply voltage low:         " + ("TRUE" if get_bit(status_val,5) else "FALSE")
-    print "    Module temp range :         " + ("TRUE" if get_bit(status_val,6) else "FALSE")
-    print "    -                 :         " + ("TRUE" if get_bit(status_val,7) else "FALSE")
-    print "    Shutter sensor 1  :         " + ("TRUE" if get_bit(status_val,8) else "FALSE")
-    print "    Shutter sensor 2  :         " + ("TRUE" if get_bit(status_val,9) else "FALSE")
-    print "    -                 :         " + ("TRUE" if get_bit(status_val,10) else "FALSE")
-    print "    -                 :         " + ("TRUE" if get_bit(status_val,11) else "FALSE")
-    print "    Filter 1 moving   :         " + ("TRUE" if get_bit(status_val,12) else "FALSE")
-    print "    Filter 2 moving   :         " + ("TRUE" if get_bit(status_val,13) else "FALSE")
-    print "    Filter 3 moving   :         " + ("TRUE" if get_bit(status_val,14) else "FALSE")
-    print "    Error code present:         " + ("TRUE" if get_bit(status_val,15) else "FALSE")
+    print("VARIA Status Bits:")
+    print("    -                 :         " + ("TRUE" if get_bit(status_val,0) else "FALSE"))
+    print("    Interlock off     :         " + ("TRUE" if get_bit(status_val,1) else "FALSE"))
+    print("    Interlock loop in :         " + ("TRUE" if get_bit(status_val,2) else "FALSE"))
+    print("    Interlock loop out:         " + ("TRUE" if get_bit(status_val,3) else "FALSE"))
+    print("    -                 :         " + ("TRUE" if get_bit(status_val,4) else "FALSE"))
+    print("    Supply voltage low:         " + ("TRUE" if get_bit(status_val,5) else "FALSE"))
+    print("    Module temp range :         " + ("TRUE" if get_bit(status_val,6) else "FALSE"))
+    print("    -                 :         " + ("TRUE" if get_bit(status_val,7) else "FALSE"))
+    print("    Shutter sensor 1  :         " + ("TRUE" if get_bit(status_val,8) else "FALSE"))
+    print("    Shutter sensor 2  :         " + ("TRUE" if get_bit(status_val,9) else "FALSE"))
+    print("    -                 :         " + ("TRUE" if get_bit(status_val,10) else "FALSE"))
+    print("    -                 :         " + ("TRUE" if get_bit(status_val,11) else "FALSE"))
+    print("    Filter 1 moving   :         " + ("TRUE" if get_bit(status_val,12) else "FALSE"))
+    print("    Filter 2 moving   :         " + ("TRUE" if get_bit(status_val,13) else "FALSE"))
+    print("    Filter 3 moving   :         " + ("TRUE" if get_bit(status_val,14) else "FALSE"))
+    print("    Error code present:         " + ("TRUE" if get_bit(status_val,15) else "FALSE"))
     return
 
 def statusbitstolist(status_val,bitlen):
@@ -148,7 +148,7 @@ def statusbitstolist(status_val,bitlen):
         integer up until the bitlen-th bit.
     """
     ret = []
-    for i in xrange(bitlen-1,-1,-1):
+    for i in range(bitlen-1,-1,-1):
         ret.append(get_bit(status_val,i))
     return ret
 
@@ -175,7 +175,7 @@ class SerialDevice(object):
             else:
                 return self.fd.read(numbytes)
         except Exception as e:
-            print('caught this error: ' + repr(e))
+            print(('caught this error: ' + repr(e)))
             raise CommTimeoutException('Timeout on read', repr(e))
 
     def fd_write(self, buf):
@@ -229,12 +229,12 @@ class SerialDevice(object):
         response = ''
 
         if self.verbose:
-            print ("Command Sent: %s"%(cmd))
+            print(("Command Sent: %s"%(cmd)))
         try:
             cmd += self.write_terminator
             self.fd_write(cmd)
         except (serial.SerialTimeoutException, socket.timeout) as e:
-            print ("Error. Serial write timed out: %s"%(str(e)))
+            print(("Error. Serial write timed out: %s"%(str(e))))
             raise
             return None
         if response_expected:
@@ -242,17 +242,17 @@ class SerialDevice(object):
                 try:
                     response += self.fd_read(1)
                     if len(response) <= 0:
-                        print "Error.  No data received"
+                        print("Error.  No data received")
                         return response
                     #print response
 
                     if response[-1*len(self.read_terminator):] == self.read_terminator:
                         response = response[:-1*len(self.read_terminator)]
                         if self.verbose:
-                            print "Response: %s" % response
+                            print("Response: %s" % response)
                         break
                 except serial.SerialTimeoutException as e:
-                    print "Error. Serial read timedout"
+                    print("Error. Serial read timedout")
                     return None
 
         # sleep after last transmit 50ms per User's Manual
@@ -272,7 +272,7 @@ class SerialDevice(object):
 
         ### Determine if port is an IP address
         if (validate_ip(port)):
-            if verbose: print("IP address supplied: IP=%s, port=%d\n"%(port,arg));
+            if verbose: print(("IP address supplied: IP=%s, port=%d\n"%(port,arg)));
             try:
                 self.fd = socket.socket()
                 self.fd.settimeout(timeout)
@@ -284,7 +284,7 @@ class SerialDevice(object):
             ### Connect to serial port
             try:
                 self.fd = comm_open (port, arg, parity, stopbits, bytesize, rtscts)
-		print('Connected to serial port')
+                print('Connected to serial port')
             except Exception as e:
                 raise CommError('connection', 'Unable to connect to serial port: %s'%(str(e)))
                 self.fd = None
@@ -294,10 +294,10 @@ class Nkt(SerialDevice):
         #Initialize variables
         self.verbose = verbose
         self.terminator = ''
-        self.txBuffer = '' #char buffer
+        self.txBuffer = ''.encode() #char buffer
         self.txCRC = 0 #short int
         self.masterId = 66
-        self.xtrmModuleAddr = 15 # 15 for ext-4, 1 for compact
+        self.xtrmModuleAddr = 1 #15
         super(Nkt, self).__init__(port, arg, rtscts=False, write_terminator='', read_terminator='')
 
     def addToTxMsgData2(self, data, escParse=False, updCRC=False):
@@ -307,18 +307,18 @@ class Nkt(SerialDevice):
             self.txCRC = self.calcCRC16(data, self.txCRC)
         if escParse:
             if data == 0x0D or data == 0x0A or data == 0x5E:
-                if vverbose: print('escParse: data=%d'%(data))
+                if vverbose: print(('escParse: data=%d'%(data)))
                 self.txBuffer = self.txBuffer + struct.pack('B', 0x5E)
                 data += 0x40
         self.txBuffer = self.txBuffer + struct.pack('B', data)
         if vverbose:
-            print("%s"%(':'.join("{:02x}".format(ord(c)) for c in self.txBuffer)))
+            print(("%s"%(':'.join("{:02x}".format(ord(c)) for c in self.txBuffer))))
 
     def addToTxMsgData(self, idx, cnt, data=None, escParse=False, updCRC=False):
         """ Adds a multi-byte list of data (parameter 'data') to the currently building
             telegram
         """
-        for n in xrange(cnt):
+        for n in range(cnt):
             self.addToTxMsgData2(ord(data[n+idx]),escParse,updCRC) #likely not pythonic
 
     def calcCRC16(self, data, oldCRC):
@@ -358,13 +358,13 @@ class Nkt(SerialDevice):
         """ Sends a telegram to the device and register specified in parameters deviceId
             and registerId respectively, consisting of the data specified in parameter data
         """
-        self.txBuffer = '' #initialize empty buffer
+        self.txBuffer = ''.encode() #initialize empty buffer
         self.txCRC = 0 #initialize crc to 0
 
         if vverbose:
-            print("+--------------------------------------------+\n"
+            print(("+--------------------------------------------+\n"
             +"|             Building Telegram              |\n"
-            +"+--------------------------------------------+")
+            +"+--------------------------------------------+"))
 
         self.addToTxMsgData2(0x0D, False, False) #sot
         self.addToTxMsgData2(deviceId, True, True)
@@ -378,7 +378,7 @@ class Nkt(SerialDevice):
         self.addToTxMsgData2(0x0A, False, False) #eot
 
         #if self.verbose: print(self.txBuffer)
-        if vverbose: print("String Telegram: "+repr(self.txBuffer)+'\n')
+        if vverbose: print(("String Telegram: "+repr(self.txBuffer)+'\n'))
         self.fd_write(self.txBuffer)
 
     def receive_message(self, deviceId, registerId, msgType, payload=None):
@@ -391,12 +391,12 @@ class Nkt(SerialDevice):
         reply = self.fd_read(1024)
         state = Hunting_SOT
         if vverbose:
-            print("Received: %s\n"%(':'.join("{:02x}".format(ord(c)) for c in reply)))
-            print("+--------------------------------------------+\n"
+            print(("Received: %s\n"%(':'.join("{:02x}".format(ord(c)) for c in reply))))
+            print(("+--------------------------------------------+\n"
             +"|              Parsing Telegram              |\n"
-            +"+--------------------------------------------+")
+            +"+--------------------------------------------+"))
         for c in range(len(reply)):
-            if vverbose: print("Byte %d = %d"%(c,ord(reply[c])))
+            if vverbose: print(("Byte %d = %d"%(c,ord(reply[c]))))
             if (state==Hunting_SOT):
                 if (ord(reply[c])==0x0d):
                     if vverbose: print("Found Start of Telegram")
@@ -409,13 +409,13 @@ class Nkt(SerialDevice):
                     if (len(RxBuffer)>=5): #Dest+Src+Type+msbCRC+lsbCRC==Minimum telegram length
                         if (crc==0): #We have collected a message with valid CRC - Check contents
                             if verbose:
-                                print("+--------------------------------------------+\n"
+                                print(("+--------------------------------------------+\n"
                                 +"|             Checking Contents              |\n"
-                                +"+--------------------------------------------+")
-                                print("RxBuffer[0] = 0x%X; masterId = 0x%X ; RxBuffer[1] = 0x%X; deviceId = 0x%X;"
+                                +"+--------------------------------------------+"))
+                                print(("RxBuffer[0] = 0x%X; masterId = 0x%X ; RxBuffer[1] = 0x%X; deviceId = 0x%X;"
                                 " RxBuffer[2] = 0x%X ; msgType = 0x%X; RxBuffer[3] = 0x%X ; registerId = 0x%X"
                                 %(ord(RxBuffer[0]),self.masterId,ord(RxBuffer[1]),deviceId,ord(RxBuffer[2]),msgType,
-                                ord(RxBuffer[3]),registerId))
+                                ord(RxBuffer[3]),registerId)))
                             if (ord(RxBuffer[0])==self.masterId and ord(RxBuffer[1])==deviceId and ord(RxBuffer[2])==
                             msgType and ord(RxBuffer[3])==registerId):
                                 RxBuffer = RxBuffer[:-2] + chr(0) + chr(0) #Remove CRC
@@ -437,7 +437,7 @@ class Nkt(SerialDevice):
                         else:
                             RxBuffer = RxBuffer + reply[c]
                         crc = self.calcCRC16(ord(RxBuffer[len(RxBuffer)-1]),crc)
-        if verbose: print("RxState = %d\n"%state)
+        if verbose: print(("RxState = %d\n"%state))
         return state
 
     def read_UINTbyte(self, deviceId, registerId):
@@ -452,11 +452,11 @@ class Nkt(SerialDevice):
         self.send_message(deviceId, registerId, 0x04)
         if (self.receive_message(deviceId,registerId,0x08,tempArray)==MessageReady):
             if verbose:
-                print("+--------------------------------------------+\n"
+                print(("+--------------------------------------------+\n"
                 +"|                Parsing Reply               |\n"
-                +"+--------------------------------------------+")
-                print("tempArray size = %d"%len(tempArray[0]))
-                print("tempArray[0] = %d\n"%ord(tempArray[0][0]))
+                +"+--------------------------------------------+"))
+                print(("tempArray size = %d"%len(tempArray[0])))
+                print(("tempArray[0] = %d\n"%ord(tempArray[0][0])))
             ### Interpret as Byte
             if (len(tempArray[0])==1):
                 retVal = ord(tempArray[0][0])
@@ -487,14 +487,14 @@ class Nkt(SerialDevice):
         self.send_message(deviceId, registerId, 0x04)
  
         ### Get reply
-	if (self.receive_message(deviceId,registerId,0x08,tempArray)==MessageReady):
+        if (self.receive_message(deviceId,registerId,0x08,tempArray)==MessageReady):
             if verbose:
-                print("+--------------------------------------------+\n"
+                print(("+--------------------------------------------+\n"
                 +"|                Parsing Reply               |\n"
-                +"+--------------------------------------------+")
-                print("tempArray size = %d"%len(tempArray[0]))
-                print("tempArray[1] = %d"%ord(tempArray[0][1]))
-                print("tempArray[0] = %d\n"%ord(tempArray[0][0]))
+                +"+--------------------------------------------+"))
+                print(("tempArray size = %d"%len(tempArray[0])))
+                print(("tempArray[1] = %d"%ord(tempArray[0][1])))
+                print(("tempArray[0] = %d\n"%ord(tempArray[0][0])))
         ### Interpret as 16BIT
             if (len(tempArray[0])==2):
                 retVal = ord(tempArray[0][1])<<8|ord(tempArray[0][0])
@@ -590,7 +590,7 @@ class Nkt(SerialDevice):
         """
         print("------------------- Getting Inlet Temp -------------------\n")
         ret = self.read_UINT16(self.xtrmModuleAddr,0x11)
-        print("Inlet Temp = %0.1f\n"%(float(ret)*0.1))
+        print(("Inlet Temp = %0.1f\n"%(float(ret)*0.1)))
         return float(ret) * 0.1
 
     def get_currentlevel(self):
@@ -598,7 +598,7 @@ class Nkt(SerialDevice):
         """
         print("----------------- Getting Current Level ------------------\n")
         ret = self.read_UINT16(self.xtrmModuleAddr,0x38)
-        print("Current Level = %0.1f\n"%(float(ret)*0.1))
+        print(("Current Level = %0.1f\n"%(float(ret)*0.1)))
         return float(ret) * 0.1
 
     def set_currentlevel(self,current_level):
@@ -607,7 +607,7 @@ class Nkt(SerialDevice):
         print("----------------- Setting Current Level ------------------\n")
         data = int(current_level/0.1)
         ret = self.write_UINT16(self.xtrmModuleAddr,0x38,data)
-        print("Current Level set to : %0.1f%%\n"%(power_level))
+        print(("Current Level set to : %0.1f%%\n"%(power_level)))
         return 0 if ret else -1
 
     def get_setupbits(self):
@@ -617,7 +617,7 @@ class Nkt(SerialDevice):
         """
         print("------------------- Getting Setup Bits -------------------\n")
         ret = self.read_UINT16(self.xtrmModuleAddr,0x31)
-        print("Setup Bits : %d\n"%(ret))
+        print(("Setup Bits : %d\n"%(ret)))
         return ret
 
     def set_setupbits(self,mode):
@@ -644,7 +644,7 @@ class Nkt(SerialDevice):
         """
         print("------------------ Getting Status Bits -------------------\n")
         bitwise = self.read_UINT16(self.xtrmModuleAddr,0x66)
-        print("Status Bits : %d\n"%(bitwise))
+        print(("Status Bits : %d\n"%(bitwise)))
         print_statusbits(bitwise)
         ret = (bitwise, statusbitstolist(bitwise,9))
 
@@ -664,7 +664,7 @@ class Nkt(SerialDevice):
         """
         print("-------------- Getting Pulse Picker Ratio ----------------\n")
         ret = self.read_UINT16(self.xtrmModuleAddr,0x34)
-        print("Pulse Picker Ratio : %d\n"%(ret))
+        print(("Pulse Picker Ratio : %d\n"%(ret)))
         return ret
 
     def set_pulsepickerratio(self,val):
@@ -673,7 +673,7 @@ class Nkt(SerialDevice):
         print("-------------- Setting Pulse Picker Ratio ----------------\n")
         data = val
         ret = self.write_UINT16(self.xtrmModuleAddr,0x34,data)
-        print("Pulse Picker Ratio set to : %d\n"%(data))
+        print(("Pulse Picker Ratio set to : %d\n"%(data)))
         return 0 if ret else -1
 
     def get_pulsepickerdelay(self):
@@ -681,7 +681,7 @@ class Nkt(SerialDevice):
         """
         print("-------------- Getting Pulse Picker Delay ----------------\n")
         ret = self.read_UINTbyte(self.xtrmModuleAddr,0x35)
-        print("Pulse Picker Delay : %0.1f\n"%(float(ret)*0.25))
+        print(("Pulse Picker Delay : %0.1f\n"%(float(ret)*0.25)))
         return float(ret) * 0.25
 
     def set_pulsepickerdelay(self,ns):
@@ -690,7 +690,7 @@ class Nkt(SerialDevice):
         print("-------------- Setting Pulse Picker Delay ----------------\n")
         data = int(ns/0.25)
         ret = self.write_UINTbyte(self.xtrmModuleAddr,0x35,data)
-        print("Pulse Picker Delay set to : %0.1f\n"%(ns))
+        print(("Pulse Picker Delay set to : %0.1f\n"%(ns)))
         return 0 if ret else -1
 
     def get_watchdoginterval(self):
@@ -698,7 +698,7 @@ class Nkt(SerialDevice):
         """
         print("-------------- Getting Watchdog Interval -----------------\n")
         ret = self.read_UINTbyte(self.xtrmModuleAddr,0x36)
-        print("Watchdog Interval : %d s"%(ret))
+        print(("Watchdog Interval : %d s"%(ret)))
         return ret
 
     def set_watchdoginterval(self,seconds):
@@ -708,7 +708,7 @@ class Nkt(SerialDevice):
         print("-------------- Setting Watchdog Interval -----------------\n")
         data = seconds
         ret = self.write_UINTbyte(self.xtrmModuleAddr,0x36,data)
-        print("Watchdog Interval set to : %d s"%(data))
+        print(("Watchdog Interval set to : %d s"%(data)))
         return 0 if ret else -1
 
     def get_varia_monitorinput(self):
@@ -716,7 +716,7 @@ class Nkt(SerialDevice):
         """
         print("----------------- Getting Monitor Input ------------------\n")
         ret = self.read_UINT16(16,0x13)
-        print("Varia Monitor Input : %0.1f\n"%(float(ret)*0.1))
+        print(("Varia Monitor Input : %0.1f\n"%(float(ret)*0.1)))
         return float(ret) * 0.1
 
     def get_varia_ndsetpoint(self):
@@ -725,7 +725,7 @@ class Nkt(SerialDevice):
         """
         print("------------------ Getting ND Setpoint -------------------\n")
         ret = self.read_UINT16(16,0x32)
-        print("ND Setpoint : %0.1f\n"%(float(ret)*0.1))
+        print(("ND Setpoint : %0.1f\n"%(float(ret)*0.1)))
         return float(ret) * 0.1
 
     def set_varia_ndsetpoint(self,nd):
@@ -735,7 +735,7 @@ class Nkt(SerialDevice):
         print("------------------ Setting ND Setpoint -------------------\n")
         data = int(nd/0.1)
         ret = self.write_UINT16(16,0x32,data)
-        print("ND Setpoint set to : %0.1f\n"%(nd))
+        print(("ND Setpoint set to : %0.1f\n"%(nd)))
         return 0 if ret else -1
         
     def get_varia_swpsetpoint(self):
@@ -781,7 +781,7 @@ class Nkt(SerialDevice):
             Status bits are defined on line 102.
         """
         print("--------------- Getting Varia Status Bits ----------------\n")
-        bitwise = self.read_UINT16(self.xtrmModuleAddr,0x66)
+        bitwise = self.read_UINT16(15,0x66)
         print_varia_statusbits(bitwise)
         ret = (bitwise, statusbitstolist(bitwise,16))
         return ret
