@@ -1,0 +1,173 @@
+#!/usr/bin/env kpython3
+
+# ================================================================== #
+#                .____                                               #
+#                |    |   _____    ______ ___________                #
+#                |    |   \__  \  /  ___// __ \_  __ \               #
+#                |    |___ / __ \_\___ \\  ___/|  | \/               #
+#                |_______ (____  /____  >\___  >__|                  #
+#                        \/    \/     \/     \/                      #
+#                                                                    #
+# ================================================================== #
+
+'''
+____Change Log:____
+
+  __09/06/2018__
+  DE:
+   * Changed import paths for new structure
+     * Removed sys.path.append for labjack path
+     * Removed unnecessary os, time imports
+ 
+  __11/19/2018__
+  NJ/DE:
+   * Added temporary logging:
+     * separate logit.py script isn't working for some reason.
+     * As such, I've created a new function, 'logit', in this script for now
+     * This function simply calls the 'dolog' csh script
+     - New items: subprocess import; DOLOGPTH; lasername; logit function; calls
+        to logit() function.
+
+'''
+
+import sys
+
+sys.path.append('/kroot/src/kss/nirspec/nsfiu/dev/lib/')
+from TLS import TLS_Device #Import the class
+#import logit #Custom logging library
+#import conex2 as conex
+from subprocess import call as spcall
+
+tls = TLS_Device('/dev/ttyUSB0')   #Instantiate class for serial port
+devName = 'Laser'
+DOLOGPTH = "/usr/local/kroot/src/kss/nirspec/nsfiu/dev/lib/"
+lasername = 'comments'
+
+def usage():
+    print ("""---------------------------------------
+Usage: {0} <command> <arg>
+---------------------------------------
+COMMAND:
+    on/off     Enable/disable the laser
+    power      Set the power as a fraction (0-1.0)
+    status     Check if laser is enabled and its 
+                   power as a percentage
+    help       Display help for the TLS library
+    info       Provide pertinent values for the laser
+
+ARG:
+    power      (between 0 and 1.0)
+
+EXAMPLES:
+    {0} on
+    {0} off
+    {0} power .25
+    {0} info
+--------------------------------------- """.format(devName))
+    sys.exit()
+
+def logit(system_keyword, status, checkfolder=True):
+    if checkfolder:
+        dummy = spcall(DOLOGPTH + "dolog " + str(system_keyword) + " '" + str(status).replace("'","") + "'", shell=True, executable='/bin/bash')
+    else:
+        dummy = spcall(DOLOGPTH + "dolog -s " + str(system_keyword) + " '" + str(status).replace("'","") + "'", shell=True, executable='/bin/bash')
+
+
+def main():
+    args = sys.argv[1:]
+    na = args.__len__()
+
+    quiet = True
+    if args == []:
+        usage()
+
+    else:
+        if "help" in args[0].lower():
+            help(tls)                   #Get help on class and functions
+
+        elif "-h" in args[0].lower():
+            usage()                     #Displays usage
+        
+        elif "info" in args[0].lower():
+            tls.open()                  #Open comms
+            tls.printDev()              #Print all pertinent values for the device
+            tls.close()                 #Close comms
+            sys.exit()
+            
+        elif "on" in args[0].lower():
+            tls.open()                  #Open comms
+            tls.enableOut()             #Laser enable       
+            tls.close()                 #Close comms
+            logit(lasername,'Laser: turned ON')
+            
+        elif "off" in args[0].lower():
+            tls.open()                  #Open comms
+            tls.disableOut()            #Laser disable
+            tls.close()                 #Close comms
+            logit(lasername,'Laser: turned OFF')
+            
+            
+        elif ("?" in args[0].lower()) or ("st" in args[0].lower()):
+            tls.open()                  #Open comms
+            print("Laser enabled: "+str(tls.isEnableOut()))    #Check if the output is enabled
+            print("Percent laser power: %0.2f %%"%(tls.reqPowerAct()/1.6804*100))    #Check actual power output
+            tls.close()                 #Close comms
+            sys.exit()
+        
+        elif "power" in args[0].lower(): 
+            if na < 2:
+                usage()
+            try:
+                pos = float(args[1])
+                if (0 <= pos <= 1.0):             
+                    tls.open()                 #Open comms
+                    tls.setPowerPrct(pos)      #Set power as a fraction (range: 0.0 to 1.0)          
+                    tls.close()                #Close comms
+                    logit(lasername,'Laser: power set to '+str(pos*100)+'%')
+                else:
+                    print("Laser power range: 0-1.0")
+            except ValueError as e:
+                print(e)
+                print('Please enter a float between 0 and 1.0') 
+
+        else:
+            usage()
+
+
+# =====================================================================
+if __name__ == "__main__":
+    main()
+    
+    
+# ====================================================================
+#Extra code
+"""
+        elif "ramp" in args[0].lower():
+            if na < 4:
+                usage()
+            elif isinstance(float(args[1]),float) and isinstance(int(args[2]),int):
+                pos_in = float(param2[0])
+                pos_max = float(args[1])
+                nsteps = int(args[2])
+                st = float(args[3])
+                if ((pos_in-pos_max)>=0) and ((pos_in+pos_max)<=27):
+                    logit.logit(conexname,'start_scaning')
+                    con.open(cid, conexname)
+                    con.move(pos_in-pos_max, conexname)
+                    logit.logit(conexname,'scanning_to_pos_'+str(pos_in-pos_max))
+                    time.sleep(1)
+                    for i in range(nsteps+1):
+                        posi = pos_in+(2.*i/nsteps-1)*pos_max
+                        con.move(posi, conexname)
+                        logit.logit(conexname,'scanning_to_pos_'+str(posi))
+                        time.sleep(st)
+                    logit.logit(conexname,'stop_scaning')
+                    time.sleep(1)
+                    con.move(pos_in, conexname)
+                    con.close()
+                    logit.logit(conexname,'moving_to_pos_in_'+param2[0])
+                else:
+                    print("Value must be between 0 and 27. Try again...\n")
+            else:
+                usage()
+"""       
