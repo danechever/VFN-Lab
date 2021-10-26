@@ -30,7 +30,7 @@ stage.MOV(axis, pos);
 tic     % implement timeout to avoid infinite loop
 while(stage.IsMoving == 1)
     pause(0.01);
-    if toc > 60
+    if toc > 120
         error('Stage failed to finish move in 60 seconds')
     end
 end 

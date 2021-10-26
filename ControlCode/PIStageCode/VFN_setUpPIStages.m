@@ -64,10 +64,11 @@ elseif strcmp(contype, 'tcp+rs232')
     % TO USER: enter the devname (COM Port)
         % When on Windos: use integers instead of strings.
         % Ex: Linux: {'/dev/ttyUSB4'}, Windows: {1}
-    RS232.devnames    = {'/dev/ttyUSB4'};
+    RS232.devnames    = {'/dev/ttyUSB4', '/dev/ttyUSB6', '/dev/ttyUSB7'};
     % TO USER: enter the SN for RS232 stages here
         % Enter as a vector, even if only 1 stage
-    RS232.ExpectedSns = [119063717];
+        % Must be a COLUMN vector (ie. use semi-colon between elements)
+    RS232.ExpectedSns = [119063717; 119069544; 119063721];
 else 
     %-- unrecognized contype
     error('Invalid connection type "contype"')
