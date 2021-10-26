@@ -2,9 +2,9 @@
 
 %% Parameters to set
 varPWR = 100;       % Power level
-varEMS = false;      % Emission state (true = on; false = off)
-varLAM = 635;       % Center wavelenth on varia
-varBWD = 3;         % Bandwidth on varia
+varEMS = true;      % Emission state (true = on; false = off)
+varLAM = 650;       % Center wavelenth on varia
+varBWD = 10;         % Bandwidth on varia
 
 %% Push params
 fprintf('\n--- Setting parameters:\n')
@@ -20,6 +20,9 @@ fprintf('      Bandwidth  = %f\n', varBWD);
 
 %-- Instantiate the NKT (will be "NKT" variable)
 VFN_setUpNKT;   
+
+% Make sure that the xtrmModuleAddr is set to the right one for the superK EXT
+NKT.nktobj.xtrmModuleAddr = int64(15);
 
 %-- Set power
 VFN_NKT_setPowerLevel(NKT, varPWR);

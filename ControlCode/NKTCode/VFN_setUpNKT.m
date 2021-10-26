@@ -22,8 +22,9 @@ if ~exist('NKT', 'var') || ~isfield(NKT, 'CONNECTED') || ~NKT.CONNECTED
     
     % Create Nkt object using nkt_mod.py
       %NOTE: if one doesnt work, try the other
-    %NKT.nktobj = py.nkt_mod_falco_py3.Nkt('/dev/ttyUSB5',115200);%115200%
-     NKT.nktobj = py.nkt_mod_falco.Nkt('/dev/ttyUSB5',115200);%115200%
+      %UPDATE THE USB PORT WITH THE ACTUAL NKT USB ADDRESS
+    %NKT.nktobj = py.nkt_mod_falco_py3.Nkt('/dev/ttyUSB9',115200);%115200%
+    NKT.nktobj = py.nkt_mod_falco.Nkt('/dev/ttyUSB9',115200);%115200%
     
     NKT.CONNECTED = true;
     
