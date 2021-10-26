@@ -57,7 +57,7 @@ elseif isunix
     % PM.inst = py.ThorlabsPM100.USBTMC();
     
 	% %-- If default USBTMC path fails, provide path here
-	PM.inst = py.ThorlabsPM100.USBTMC(pyargs('device','/dev/ttyPM100D'));
+	PM.inst = py.ThorlabsPM100.USBTMC(pyargs('device','/dev/ttyPM100D602'));
     
     % Alias PM.rm to PM.inst so that cleanUp func. will work correctly
     % PM.rm = PM.inst;
