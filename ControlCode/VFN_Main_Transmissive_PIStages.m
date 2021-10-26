@@ -43,41 +43,41 @@ clear all
 %% General settings 
 
 % Directory for saving data:
-svFld = '/media/Data_Drive/VFN/TestbedData/210428_COV8';
+svFld = '/media/Data_Drive/VFN/TestbedData/211019_NLS1';
 
 %-- Experiment name for figures
-expNm = '210Don_635XPolPoly3';
+expNm = '47Don_635VortScan13';
 
 %-- Custom auto save text
 % Change at every run
-run_msg = 'Smaller focus scan to see if striping is gone.';
+run_msg = 'Set foc back to that from #45 then scan foc and vortex in X and Y.';
 % Change when doing new set of experiments
-set_msg = 'Testing polarized system in 10nm BW light.';
-las_msg = 'superK Compact 100%.';   % Laser/Varia settings
-flt_msg = '650x10nm';                     % Optical Filter used
-vtx_msg = 'JPL Poly 550nm Charge 2';            % Vortex in use
+set_msg = 'Optimize vortex centering.';
+las_msg = 'KLS635, 5.0mW.';   % Laser/Varia settings
+flt_msg = 'N/A';                     % Optical Filter used
+vtx_msg = 'JPL Poly V550-BB15 Charge 2';            % Vortex in use
 
 %-- Final analysis stuff
 isRadAvgAnalysis = true;    % calc rel. int. time in all frames using rad avg
 
 %~~ ZABER STUFF 
 % Flag to enable vortex scan.
-isVortScan = false;
+isVortScan = true;
 
 % Distance to move zabers for backlash removal [in mm]
 zabBacklash = 0.040;         %Note: affects vortex
 
 % Vortex center of scan [in mm]
-VXcenter =  2.834394;       % 
-VYcenter = 14.034012;       %13.828012-6 (5.8410 is min if X is at 2.8444)
+VXcenter = 15.5068;       % 
+VYcenter = 12.8504;       %13.828012-6 (5.8410 is min if X is at 2.8444)
 
 % Vortex scan properties
 %To include center values as a point in scan; use ODD number of points
-VXpoints = 1;           % Number of X points in scan
+VXpoints = 3;           % Number of X points in scan
 VYpoints = VXpoints;    % Number of Y points in scan
 
 % Vortex step params in [mm]  
-vStepRange = 0.007; %Vortex will be scanned +/- this value
+vStepRange = 0.04; %Vortex will be scanned +/- this value
                     % ie. scan will be: 
                     % [VXcen-vStepRa to VXcen+vStepRa] w/ Vxpoi steps
 %~~ END ZABER STUFF 
@@ -85,21 +85,21 @@ vStepRange = 0.007; %Vortex will be scanned +/- this value
 %~~ PI STUFF 
 % Fiber Focus Scan properties
 %To include center value as a point; use ODD number of points
-Zcenter   = 9.500606;% MMF: 9.193358;  % [mm] Focus (Z) center point
+Zcenter   = 3.400000;% MMF: 9.193358;  % [mm] Focus (Z) center point
 Zpoints   = 3;           % Number of focci taken (exact number; no longer +1)
-ZStepSize = 0.015;      % Step size in mm
+ZStepSize = 0.010;      % Step size in mm
 
 % Fiber X/Y center of scan in mm
-Xcenter = 7.383734;% MMF: 7.405309;  % [mm]
-Ycenter = 7.091133;% MMF: -9.856926; % [mm]
+Xcenter = 8.477166;% MMF: 7.405309;  % [mm]
+Ycenter = 8.208833;% MMF: -9.856926; % [mm]
 
 % Fiber scan properties
 %To include center values as a point in scan; use EVEN number of points
-Xpoints = 24;% number of X points in scan (actual scan will have +1)
+Xpoints = 30;% number of X points in scan (actual scan will have +1)
 Ypoints = Xpoints; % Ycenter/Xcenter will be an extra point in the middle
 
 % Fiber step sizes in Volts
-refStep   = 14; % refStep is the step size for a full PSF with a 10*10 grid
+refStep   = 10; % refStep is the step size for a full PSF with a 10*10 grid
 StepSize  = refStep/(Xpoints/1e-3);
 %~~ END PIEZO STUFF 
 
@@ -131,7 +131,7 @@ nrmValReport = 1;   % @635nm typ = 14.08; @780nm typ = 44.1
                         % affects the printed values at end; NORM'd cube
                         % values are still un-normed. SET =1 to not norm
                         % the printed values.
-pmCalWvl = 650; % Wavelength for redPM for normalization
+pmCalWvl = 635; % Wavelength for redPM for normalization
 %~~ END RED (NORM) POWER METER STUFF
 
 %% Zaber Setup
@@ -172,7 +172,7 @@ VFN_setUpBenchPIStages;
 %% Femto setup
 fprintf('---Performing Femto Setup\n')
 % Define the gain to apply for scaling. Uses same gain for all: gnFact^(FMTO_scale-6)
-FMTO.gnFact  = 9.97;
+FMTO.gnFact  = 10.01;
 
 % Setup Femto 
 VFN_setUpFMTO;  
