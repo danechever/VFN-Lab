@@ -21,10 +21,10 @@ function [xax, yax] = VFN_An_getAxes(nm2find, indVect, an_params)
 %               - an_params.STRNMS - Vector of string filenames within which 
 %                 to look for nm2find. This includes the full path to file.
 %               - an_params.um2LD - microns to Lambda/D conversion 
-%               - an_params.V2um - volts to microns conversion
+%               - an_params.V2um - volts to microns conversion (if needed)
 %
 %     Returns
-%     - '[xax, yax]' axes for plotting
+%     - '[xax, yax]' axes for plotting (in units of lambda/D)
 %
 %   Examples:
 %      [xax, yax] = VFN_An_getAxes('foo\bar', [20,22,...], an_params);
@@ -34,7 +34,7 @@ function [xax, yax] = VFN_An_getAxes(nm2find, indVect, an_params)
 %--Axes finder - axes in L/D relative to null point
     %-- Extract pertinent parameters
     um2LD   = an_params.um2LD;
-    V2um    = an_params.V2um;
+    if isfield(an_params,'V2um'); V2um = an_params.V2um; end
     
     %-- Load keywords
     kwds    = VFN_An_kwdsLoad(nm2find, 1, an_params);
@@ -43,12 +43,23 @@ function [xax, yax] = VFN_An_getAxes(nm2find, indVect, an_params)
     stepSz  = VFN_An_getKwd(kwds, 'XYSTEPS');
     ax1     = VFN_An_getKwd(kwds, 'NAXIS1');
     ax2     = VFN_An_getKwd(kwds, 'NAXIS2');
+    scantype = VFN_An_getKwd(kwds, 'CNTRLCD');
     
-    %-- Create axis w.r.t null
-    xax = ((1:ax1)-indVect(2)) * stepSz; % Distance from null point [Volts]
-    xax = xax * V2um;     % Distance in microns (assuming 1 micron/10 vots)
-    xax = xax * um2LD;    % Convert to L/D
-    yax = ((1:ax2)-indVect(1)) * stepSz; % Distance from null point [Volts]
-    yax = yax * V2um;     % Distance in microns (assuming 1 micron/10 vots)
-    yax = yax * um2LD;    % Convert to L/D
+    %-- Create axis w.r.t provided origin (indVect)
+    % Get distance from origin [in native units for control code]
+    xax = ((1:ax1)-indVect(2)) * stepSz; 
+    yax = ((1:ax2)-indVect(1)) * stepSz; 
+    % Convert to microns
+    if strcmp(scantype, 'Main_Trans_PIStg')
+        % Native code axis units are mm 
+        % Convert axis from mm to um 
+        xax = xax * 1e3; yax = yax * 1e3;
+    else
+        % Assume these cubes use the Thorlabs Piezo actuators so native
+        % code units should be Volts
+        % Convert axis from V to um
+        xax = xax * V2um; yax = yax * V2um;
+    end
+    % Convert to L/D
+    xax = xax * um2LD; yax = yax * um2LD;    
 end

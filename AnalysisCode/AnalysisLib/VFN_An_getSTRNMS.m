@@ -2,6 +2,8 @@ function STRNMS = VFN_An_getSTRNMS(nmWpath)
 % VFN_An_getSTRNMS Return all filenames, with paths, matching the
 %       description within the a directory.
 %
+%   ** NOTE: nmWpath should be a cell array! (ie. use curly brackets {})
+%
 %   - The directory should be included within the provided argument. 
 %   - This function basically finds all files matching the full-path name
 %   - The default dir() function is at the core of this function
@@ -11,7 +13,7 @@ function STRNMS = VFN_An_getSTRNMS(nmWpath)
 %     within the included directory. 
 %     - 'nmWpath' Filenames to look for, including paths. Wildcards such as
 %               '*' are allowed to find mutliple matching filenames.
-%                 This should be a cell array with all filenames
+%                 This should be a CELL ARRAY with all filenames
 %
 %     Returns
 %     - 'STRNMS' string array containing full path and name for all files

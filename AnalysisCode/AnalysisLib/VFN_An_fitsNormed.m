@@ -6,8 +6,7 @@ function nrmDat = VFN_An_fitsNormed(nm2find, frame, an_params)
 %   - The normalization includes:
 %       - subtract photodiode biases (obtained from gains matrix)
 %       - average the samples at each point (nominally 100 samples)
-%       - divide by power incident on the fiber (measured by the red PM 
-%           before the last lens and accounting for losses in that lens)
+%       - divide by power incident on the fiber
 %       - account for fiber Fresnel reflections and propogation losses
 %   - Note: this function relies on VFN_An_fitsLoad to load the data.
 %   - Note: this function relies on VFN_An_kwdsLoad to load the keywords
@@ -17,6 +16,10 @@ function nrmDat = VFN_An_fitsNormed(nm2find, frame, an_params)
 %       value is now optional in the scan code. It now checks if the red PM was
 %       used. If it was not, it does not normalize by the power on the fiber tip
 %       but it does still account for propagation and fresnel losses.
+%
+%   * UPDATE [07/2021]:
+%       Correct for when the redPM is behind the lens s.t. lens loss is not
+%       accounted for.
 %   
 %   nrmDat = VFN_An_fitsNormed(nm2find, frame, an_params)
 %     Load the cube/scan containing the string name, nm2find, and analyze
@@ -58,9 +61,10 @@ function nrmDat = VFN_An_fitsNormed(nm2find, frame, an_params)
 %--Eta Map Calculator Function - Single Frame Scans
     %-- Define parameters
     gnFactor    = an_params.gnFactor;
-    lensTHPT    = an_params.lensTHPT;
     FR          = an_params.FR;
     PL          = an_params.PL;
+    % Make lens throughput optional since redPM is sometimes behind lens
+    if isfield(an_params,'lensTHPT'); lensTHPT = an_params.lensTHPT; end
     
     %-- Load the cubes
     raw     = VFN_An_fitsLoad(nm2find, 1, an_params);
@@ -74,16 +78,15 @@ function nrmDat = VFN_An_fitsNormed(nm2find, frame, an_params)
     % Extract the type of scan
     scantype = VFN_An_getKwd(kwds, 'CNTRLCD');
     
-    %-- Check vort/foc were not scanned - ie. effectively a single scan
-    if ((VFN_An_getKwd(kwds, 'NAXIS') ~= 3) & (scantype ~= 'WavelengthScan'))
+    %-- For wavelength scans, check that vort/foc were not scanned
+      % ie. effectively a single scan
+    if ((VFN_An_getKwd(kwds, 'NAXIS') ~= 3) && (scantype ~= 'WavelengthScan'))
         error('Matrix dimensionality is not correct for this analysis:\n    %s', nm2find)
     end
     
-    %-- Subtract bias from raw data
-    % We know these data matrices only have 3 dimensions so just use repmat
-    gns     = repmat(scl(:,:,3),[1 1 size(raw,3)]);    %bias matrix
-    % Subtract element-wise now that dimensionality is matched
-    nrm     = raw - gns;
+    %-- Subtract bias (frame 3 in scl matrix) from raw data
+    % *matlab automatically resizes compatible matrices for subtraction*
+    nrm     = raw - scl(:,:,3);
     
     %-- Calculate the mean of the Nread samples for
     nrm = mean(nrm,3);
@@ -117,6 +120,7 @@ function nrmDat = VFN_An_fitsNormed(nm2find, frame, an_params)
             nrmVl = an_params.NormVals(frame(1),frame(2));
         end 
     else
+    % This "else" includes 'Main_Trans_PIStg'
         rdOfmto     = an_params.rdOfmto;
         %-- Check if red PM was used. Assumes that if normflag keyword is missing,
             %the cube predates this keyword and has the red PM data in it.
@@ -126,15 +130,20 @@ function nrmDat = VFN_An_fitsNormed(nm2find, frame, an_params)
             %-- Get red thorlabs PM value for normalization since it exists
             % Read from keywords
             nrmVl = VFN_An_getKwd(kwds, 'NORMMEAN');
-            % Account for losses in the final lens
-            nrmVl = nrmVl*lensTHPT;
+            %NOTE: Main_Trans_PIStg doesn't need to account for lens losses
+            % since the redPM was behind the lens.
+            if ~strcmp(scantype,'Main_Trans_PIStg')
+                % Account for losses in the final lens
+                nrmVl = nrmVl*lensTHPT;
+            end
             % Convert from Watts to uWatts
             nrmVl = nrmVl*10^6;
+            % Convert from uWatts to Femto volts @ gain=6
             nrmVl = nrmVl/rdOfmto;
         else
             %-- Red PM was not used (flag was present but not 'T[rue]'
             % Set nrmVal to 1 so that we do not scale/normalize the data
-            nrmVl = 1/rdOfmto;
+            nrmVl = 1;%/rdOfmto;
         end
     end
     
