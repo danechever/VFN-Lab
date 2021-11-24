@@ -64,7 +64,7 @@ elseif strcmp(contype, 'tcp+rs232')
     % TO USER: enter the devname (COM Port)
         % When on Windos: use integers instead of strings.
         % Ex: Linux: {'/dev/ttyUSB4'}, Windows: {1}
-    RS232.devnames    = {'/dev/ttyUSB4', '/dev/ttyUSB6', '/dev/ttyUSB7'};
+    RS232.devnames    = {'/dev/ttyUSB1', '/dev/ttyUSB2', '/dev/ttyUSB3'};
     % TO USER: enter the SN for RS232 stages here
         % Enter as a vector, even if only 1 stage
         % Must be a COLUMN vector (ie. use semi-colon between elements)
