@@ -57,7 +57,7 @@ xvalsFP = coordsFP.xvals;% Helpful for plotting
 yvalsFP = coordsFP.yvals;
 
 %-- Key values for getting scaling right using falco MFT propagator
-% Lambda over D of central wavelength in radians at final focal plane 
+% Lambda over D of central wavelength in meters at final focal plane 
 lambda0Fnum_meters = lambda0*foc/DPup;     
 % "pixel" size in pupil and image planes
 dx  = DPup/(2*apRad);   % meters/sample
@@ -113,15 +113,16 @@ for ch = 1:numWavelengths
     PSF(:,:,ch) = propcustom_mft_PtoF(Epup(:,:,ch),foc, lambdas(ch), dx, dxi, Nxi, dxi, Nxi);
 end
 
-figure;
+figure(100);
 for ch = 1:numWavelengths    
     
     PSF_lam = PSF(:,:,ch);
     radPro = PSF_lam(Nxi/2+1,Nxi/2+1:end);
     semilogy(abs(radPro).^2);
     hold on;
-    
+    labels{ch} = sprintf('lam = %0.1f nm',lambdas(ch)*1e9);    
 end
+legend(labels)
 
 
 % Calculate intensity (peak normalized)
@@ -165,9 +166,11 @@ for ch = 1:numWavelengths
 end
 
 % Calculate intensity (peak normalized)
-iPSFv_tmp = abs(PSFv).^2/normI;
+%iPSFv_tmp = abs(PSFv).^2/normI;
 % Take mean and store in image matrix
-iPSFv_BB = mean(iPSFv_tmp,3);
+
+iPSFv_BB = mean(abs(PSFv).^2,3);
+iPSFv_BB = iPSFv_BB/max(iPSFv_BB(:));
 
 
 figure(5)
@@ -216,11 +219,7 @@ for ch = 1:numWavelengths
     % Compute the monochromatic coupling map (spatial units of lambda/D)
     eta_maps(:,:,ch) = generateCouplingMap( fibmode(:,:,ch), PSFv(:,:,ch), totalPower0, 7*lambda0Fnum_samp, coordsFP);
 
-    % @GARY DO I NEED TO RESCALE SOMETHING LIKE THE NORMAL COUPLING MAP FUNC DOES?
-
 end
-
-%eta_maps = generateCouplingMap_polychromatic(PUPIL.*EPM, fiber_props, lambda0, Fnum, lambdas, totalPower0, lambdaOverD, 5*lambdaOverD, coords, fibmode);
 
 %% Display coupling maps
 %-- Linear scale
