@@ -1,0 +1,44 @@
+#!/usr/bin/env kpython3
+
+# inherent python libraries
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from time import sleep, localtime
+import numpy as np
+from spec_scans_lab import fam_scan
+import sys
+
+# import spec scans
+sys.path.append('~/dev/')
+import spec_scans_lab 
+
+# parse args
+parser = ArgumentParser()
+
+### start/stop/step are positional
+parser.add_argument('-gridsize', default=9, help='Size of scan', type=int)
+parser.add_argument('-step', default=1, help='Stepsize (cred2 pixels)', type=float)
+
+### Remaining are optional
+parser.add_argument('-fibers', default=None, action='extend', nargs='*', 
+					type=int, help='List of fibers to scan. Defaults to current TT location')
+parser.add_argument('-noplot', action='store_false', help='Plot scan results. Default is to plot')
+parser.add_argument('-update', action='store_true', help='Prompts to update fiber position')
+
+args = parser.parse_args()
+
+gridsize = args.gridsize
+
+if gridsize%2 != 1:
+	print('Need odd gridsize')
+	sys.exit()
+
+### run the scan
+errors = []
+try:
+	gridsize = int(np.round(gridsize))
+	width = int(np.round(gridsize-1)/2)
+	pos = fam_scan(start=-1*width*args.step, stop=width*args.step, step=args.step, fibers=args.fibers, plot=~args.noplot, update_fiber=args.update)
+except Exception as e: errors.append("Error scanning: {}".format(e))
+
+for err in errors:
+    print(err)
