@@ -163,7 +163,7 @@ def vfn_diode_scan(noll, fiber, start=-0.3, stop=0.3, step=0.01, refsrf = 'curre
 
 
     #-- Preallocate data arrays
-    zpts  = np.round(np.arange(start, stop+step/2., step), 4)   # round to net get ridiculously small values
+    zpts  = np.round(np.arange(start, stop+step/2., step), 4)   # round to not get ridiculously small values
     PD_volts = np.zeros(len(zpts)) *np.nan     # set nonsensical value (so we know if an error occurs)
 
 
@@ -223,7 +223,7 @@ def vfn_diode_scan(noll, fiber, start=-0.3, stop=0.3, step=0.01, refsrf = 'curre
     return zpts, PD_volts, PD_volt0, bkgd, minIndex, minAmp
 
 
-def vfn_3_line_scan(noll, fiber, start=-0.3, stop=0.3, step=0.01, FAM_stepRad = 200, FAM_Nstep = 20, refsrf = 'current', nreads=10, VRange = 10, delay=0.01, date = date, verbose=True, isSave=True, isTrackBetween=True):
+def vfn_3_line_scan(noll, fiber, start=-0.3, stop=0.3, step=0.01, FAM_stepRad = 200, FAM_Nstep = 20, refsrf = 'current', nreads=10, VRange = 10, delay=0.01, date = date, verbose=True, isSave=True):
     '''
     noll        Zernike to scan/tune
     fiber       (int) science fiber to use
@@ -237,9 +237,6 @@ def vfn_3_line_scan(noll, fiber, start=-0.3, stop=0.3, step=0.01, FAM_stepRad = 
     date        (str) name of subdirectory into which data will be saved - nominally a string date
     verbose     (bool) flag whether to print updates on status or keep everything quiet
     isSave      (bool) flag whether to save the output maps
-
-    DEBUGGING ELEMENTS (for use during testing):
-    isTrackBetween  (bool) flag whether tracking should be used to recenter PSF between samples
 
     returns: zpts, PD_volts, PD_volt0, bkgd, minIndex, minAmp
     '''
@@ -271,7 +268,7 @@ def vfn_3_line_scan(noll, fiber, start=-0.3, stop=0.3, step=0.01, FAM_stepRad = 
 
 
     #-- Preallocate data arrays
-    zpts  = np.round(np.arange(start, stop+step/2., step))   # round to net get ridiculously small values
+    zpts  = np.round(np.arange(start, stop+step/2., step), 4)   # round to not get ridiculously small values
     PD_volts = np.zeros((len(zpts),3,FAM_Nstep)) *np.nan     # set nonsensical value (so we know if an error occurs)
 
 
@@ -282,10 +279,20 @@ def vfn_3_line_scan(noll, fiber, start=-0.3, stop=0.3, step=0.01, FAM_stepRad = 
         DM.pokeZernike(zpt, noll, bias=flat)
         # Dolinescan FAM scan
             # NOTE: all scans will share the same start_ttm
-        pd_reads, start_ttm = tools.ttm_3_line_scans(FAM_stepRad, -FAM_stepRad, FAM_Nstep, 
+        pd_reads, start_ttm, ttm_dels = tools.ttm_3_line_scans(FAM_stepRad, -FAM_stepRad, FAM_Nstep, 
                 pause=delay, start_ttm=start_ttm, nread=nreads, VRange=VRange)
         # Save results into main array
         PD_volts[ind,:,:] = pd_reads.copy()
+
+        # TODO::: Fix the isTrackBetween feature (if we ever want to use it... currently causes issues)
+        '''
+        if isTrackBetween:
+            # Set DM back to where it started and re-acquire fiber so we have a good starting condition
+            DM.setSurf(flat)
+            acquire_fiber_new(fiber, verbose=verbose)
+            # stop tracking again for next iteration
+            track.stop_tracking()
+        '''
 
         # NOTE: don't re-acquire fiber so that all scans are centered equally
 
@@ -308,35 +315,89 @@ def vfn_3_line_scan(noll, fiber, start=-0.3, stop=0.3, step=0.01, FAM_stepRad = 
         index = numbers.index(m2)
         return m2,index
 
-    def 2SidePeakFind(numbers):
+    def TwoSidePeakFind(numbers):
         # Subfunction to find the peak on each side of the donut in this linescan
+        # Returns the average of 3 points on each side as the peak. Also returns the indices of the values in the average
 
         # Split the linescan into 2 halves
         left_half = numbers[:len(numbers)//2]
         right_half = numbers[len(numbers)//2:]
 
-        # Find the largest 3 numbers in the left half
-        left_maxs = np.sort(left_half)[-3:]
-        right_maxs = np.sort(right_half)[-3:]
+        # Find the index of the max in each half
+            # No longer use sort since in the presence of null splitting, that will cause issues
+            # Now use direct argmax in each half of the data and then take adjacent values
+        left_max_ind = left_half.argmax()
+        right_max_ind = right_half.argmax()
+        
+        # Get the 3 values around each max (adjacent values)
+            # Note: use min and max functions here to prevent errors when max is at edge of scan
+        left_maxs = left_half[max(left_max_ind-1,0):min(left_max_ind+2,len(left_half))]
+        right_maxs = right_half[max(right_max_ind-1,0):min(right_max_ind+2,len(right_half))]
 
         # Average those maxima
         left_max = left_maxs.mean()
         right_max = right_maxs.mean()
 
-        return left_max, right_max
+        return left_max, right_max, left_max_ind, right_max_ind+len(numbers)//2
+        
 
-    minMaxima = np.zeros(len(zpts))
+    allMaxima = np.zeros((len(zpts), 3, 2))     # Identified peaks - dimensions: amplitude, line, (lmax, rmax)
+    allMaxInds = np.zeros((len(zpts), 3, 2), dtype=int)    # Indices of identified peaks (same dimensionality)
     for z_ind, scan in enumerate(PD_volt_clean):
-        maxima = np.zeros(3,2)
         for line_ind in range(3):
-            lmax, rmax = 2SidePeakFind(scan[line_ind])
-            maxima[line_ind,:] = np.array([lmax, rmax])
-        minMaxima[z_ind] = min(maxima)
+            lmax, rmax,lmax_ind, rmax_ind = TwoSidePeakFind(scan[line_ind])
+            allMaxima[z_ind, line_ind, :] = np.array([lmax, rmax])
+            allMaxInds[z_ind, line_ind, :] = np.array([lmax_ind, rmax_ind])
+    minMaxima = allMaxima.min(axis=(1,2))
 
     maxIndex = minMaxima.argmax()
-    maxAmp = zpts[minIndex]
+    maxAmp = zpts[maxIndex]
     print('Maximum lowest throughput power at: %0.2f'%maxAmp)
 
+    #-- Plot
+    # Plot of control metric (lowest peak throughput value vs. zernike amplitude)
+    fig_minMax = plt.figure()
+    plt.plot(zpts, minMaxima, '-o')
+    plt.axvline(x=maxAmp)
+    plt.xlabel('Amplitude [RMS BMC Unist]')
+    plt.ylabel('PD Power [V]')
+    titlestr = '3-line Zernike Scan (Noll=%d)'%noll
+    plt.title(titlestr)
+
+    # At zernike amplitude with reported best performance, plot linescans
+    fig_bestLines = plt.figure()
+    for line_ind in range(3):
+        # Plot linescans
+        plt.plot(ttm_dels, PD_volt_clean[maxIndex,line_ind,:], '-o', label='%d$^\circ$'%(line_ind*60))
+        # Plot "peak" on each side of each linescan
+        plt.scatter(ttm_dels[allMaxInds[maxIndex, line_ind, :]], allMaxima[maxIndex, line_ind, :], s=15, marker='x')
+    # Plot center position
+    plt.axvline(x=ttm_dels[len(ttm_dels)//2])
+    plt.legend()
+    plt.xlabel('FAM Offset [urad]')
+    plt.ylabel('PD Power [V]')
+    titlestr = '3-line Zernike Scan (Noll=%d)\n'%noll
+    titlestr += 'Lines for Reported Best (Amp = %0.5f)'%maxAmp
+    plt.title(titlestr)
+    
+    # Linescans at key zernike amplitudes
+    fig_ZernLines, axs = plt.subplots(1,3, figsize=(17, 4.91))
+    zinds = [0, len(zpts)//2, -1]
+    for axind in range(3):
+        zind = zinds[axind]
+        axs[axind].plot(ttm_dels, PD_volt_clean[zind,0,:], '-o', label='$0^\circ$')
+        axs[axind].plot(ttm_dels, PD_volt_clean[zind,1,:], '-o', label='$60^\circ$')
+        axs[axind].plot(ttm_dels, PD_volt_clean[zind,2,:], '-o', label='$120^\circ$')
+        axs[axind].axvline(x=ttm_dels[len(ttm_dels)//2])
+        axs[axind].set_xlabel('FAM Offset [urad]')
+        axs[axind].set_ylabel('PD Power [V]')
+        axs[axind].set_title("Amp = %0.4f"%zpts[zind])
+    # Add general formatting
+    axs[-1].legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    titlestr = '3-line Zernike Scan (Noll=%d)\n'%noll
+    plt.suptitle(titlestr)
+    
+    
     # # Plot
     # plt.figure()
     # plt.scatter(zpts,PD_volt_clean)
@@ -360,7 +421,7 @@ def vfn_3_line_scan(noll, fiber, start=-0.3, stop=0.3, step=0.01, FAM_stepRad = 
     #     plt.savefig(savenm)
     #     printv(verbose, 'Saved: '+savenm)
 
-    return zpts, PD_volts, PD_volt0, bkgd, maxIndex, maxAmp
+    return zpts, PD_volts, PD_volt0, bkgd, maxIndex, maxAmp, minMaxima, start_ttm
 
 
 ########### Function that does 2D (TT) Scan 
@@ -411,7 +472,7 @@ def vfn_3D_PD_scan(noll, fiber, start=-0.2, stop=0.2, step=0.05, FAM_stepRad = 2
 
 
     #-- Preallocate data arrays
-    zpts  = np.round(np.arange(start, stop+step/2., step), 4)   # round to net get ridiculously small values
+    zpts  = np.round(np.arange(start, stop+step/2., step), 4)   # round to not get ridiculously small values
     PD_volts = np.zeros((len(zpts), FAM_Nstep, FAM_Nstep)) *np.nan     # set nonsensical value (so we know if an error occurs)
     # preset start_ttm to None. First iteration will then use current FAM pos and all others will use that same pos
     start_ttm = None
@@ -555,7 +616,7 @@ def vfn_3D_PD_scan(noll, fiber, start=-0.2, stop=0.2, step=0.05, FAM_stepRad = 2
     return zpts, PD_volts, PD_volt0 , bkgd, minIndex, minAmp, nulls, coords, radAvgs, start_ttm, ttm_dels
 
 ########### Function that does a single 2D scan, with analysis
-def vfn_2D_validate(FAM_stepRad=200, FAM_Nstep=20, nreads=100, VRange=10, cropVal=5, delay=0.01, verbose=True):
+def vfn_2D_validate(FAM_stepRad=200, FAM_Nstep=20, nreads=100, VRange=10, cropVal=5, delay=0.01, date =date, verbose=True, isSave=True):
     '''Function to do a simple 2D scan at current location and with current DM map
         and do analysis for the resulting scan
 
@@ -589,20 +650,40 @@ def vfn_2D_validate(FAM_stepRad=200, FAM_Nstep=20, nreads=100, VRange=10, cropVa
     null, coords, radAvg, rvec, polarim = tools.analyzeAroundNull(pd_reads_clean, cropVal=cropVal)
 
     #-- Plot the scan
-    plt.figure()
+    fig_2D = plt.figure()
     plt.imshow(pd_reads_clean.T, origin='lower', extent=[ttm_dels[0], ttm_dels[-1], ttm_dels[0], ttm_dels[-1]])
     plt.scatter(ttm_dels[coords[0]], ttm_dels[coords[1]], s=50, c='red', marker='x')
-    plt.title('2D VFN Scan - Center = {}\nNull = {} ({})'.format(start_ttm, null, coords))
+    plt.title('2D VFN Scan - Center = {}\nNull = {:0.5f} at {}'.format(start_ttm, null, coords))
     plt.xlabel('$\Delta$X [FAM units]')
     plt.ylabel('$\Delta$Y [FAM units]')
     plt.colorbar()
 
     #-- Plot the radial profile
-    plt.figure()
+    fig_AzAvg = plt.figure()
     stepsz = ttm_dels[0] - ttm_dels[1]
     plt.plot(rvec*stepsz, radAvg, 'o-')
     plt.xlabel('Separation [FAM Units]')
     plt.ylabel('PD Power [V]')
-    plt.title('Radial Profile - Peak = {}'%radAvg.max())
+    plt.title('Radial Profile - Peak = {:.05f}'.format(radAvg.max()))
+
+    #-- Save results
+    if isSave:
+        # Make sure directory exists
+        Path = '/nfiudata/VFN_Cals/'
+        date_dir = os.path.join(Path, date)
+        if not os.path.exists(date_dir):
+            os.makedirs(date_dir)
+
+        svtime = time.time()
+        # Save plots
+        savenm = date_dir+'/time%d_2DValScan_2Dmap.png'%(svtime)
+        plt.figure(fig_2D)
+        plt.savefig(savenm)
+        printv(verbose, 'Saved: '+savenm)
+
+        savenm = date_dir+'/time%d_2DValScan_AzAvg.png'%(svtime)
+        plt.figure(fig_AzAvg)
+        plt.savefig(savenm)
+        printv(verbose, 'Saved: '+savenm)
 
     return pd_reads, start_ttm, ttm_dels, bkgd, null, coords, radAvg, rvec

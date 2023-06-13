@@ -141,13 +141,17 @@ def ttm_3_line_scans(start, stop, nsteps, start_ttm=None, pause=0.0, nread=NREAD
         start_ttm = TTM.get_pos()
     with PD_cmds(VRange=VRange) as pd:
         for ang_ind in range(len(angles)):
-            angle = angles(ang_ind)
+            angle = angles[ang_ind]
             for samp_ind, ttm_del in enumerate(ttm_dels):
                 newpos = start_ttm+np.array([ttm_del*np.cos(angle), ttm_del*np.sin(angle)])
                 TTM.set_pos(newpos)
                 time.sleep(pause)
                 pd_reads[ang_ind,samp_ind] = pd.readN(nread).mean()
-    return pd_reads, start_ttm
+
+    # Set FAM back to center of scan
+    TTM.set_pos(start_ttm)
+
+    return pd_reads, start_ttm, ttm_dels
 
 def ttm_2D_scan(start, stop, nsteps, start_ttm=None, pause=0.0, nread=NREAD_dflt, VRange=VRANGE_dflt):
     '''Function to perfrom a 2D FAM scan
