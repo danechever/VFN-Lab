@@ -132,6 +132,23 @@ def ttm_line_scan(ttm_dels, axis, pause, start_ttm, nread=NREAD_dflt):
         time.sleep(pause)
     return pd_reads
 
+def ttm_3_line_scans(start, stop, nsteps, start_ttm=None, pause=0.0, nread=NREAD_dflt, VRange=VRANGE_dflt):
+    ttm_dels = np.linspace(start, stop, nsteps)
+    pd_reads = np.full((3,len(ttm_dels)),np.nan)
+    angles = [0,np.pi/3,2*np.pi/3]
+    # Get starting FAM position (if not provided)
+    if start_ttm is None:
+        start_ttm = TTM.get_pos()
+    with PD_cmds(VRange=VRange) as pd:
+        for ang_ind in range(len(angles)):
+            angle = angles(ang_ind)
+            for samp_ind, ttm_del in enumerate(ttm_dels):
+                newpos = start_ttm+np.array([ttm_del*np.cos(angle), ttm_del*np.sin(angle)])
+                TTM.set_pos(newpos)
+                time.sleep(pause)
+                pd_reads[ang_ind,samp_ind] = pd.readN(nread).mean()
+    return pd_reads, start_ttm
+
 def ttm_2D_scan(start, stop, nsteps, start_ttm=None, pause=0.0, nread=NREAD_dflt, VRange=VRANGE_dflt):
     '''Function to perfrom a 2D FAM scan
     

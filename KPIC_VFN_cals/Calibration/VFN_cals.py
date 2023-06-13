@@ -223,6 +223,146 @@ def vfn_diode_scan(noll, fiber, start=-0.3, stop=0.3, step=0.01, refsrf = 'curre
     return zpts, PD_volts, PD_volt0, bkgd, minIndex, minAmp
 
 
+def vfn_3_line_scan(noll, fiber, start=-0.3, stop=0.3, step=0.01, FAM_stepRad = 200, FAM_Nstep = 20, refsrf = 'current', nreads=10, VRange = 10, delay=0.01, date = date, verbose=True, isSave=True, isTrackBetween=True):
+    '''
+    noll        Zernike to scan/tune
+    fiber       (int) science fiber to use
+    start       lower amplitude for noll scan
+    stop        upper amplitude for noll scan
+    step        amplitude step size for noll scan
+    refsrf      name of flatmap to use as starting point. 'current' to use current DM surface
+                  (if not 'current', must be a key in DM.flatoptdict)    
+    nreads      number of PD samples to take at each point
+    VRange      voltage range setting for PD (.1, 1, or 10)
+    date        (str) name of subdirectory into which data will be saved - nominally a string date
+    verbose     (bool) flag whether to print updates on status or keep everything quiet
+    isSave      (bool) flag whether to save the output maps
+
+    DEBUGGING ELEMENTS (for use during testing):
+    isTrackBetween  (bool) flag whether tracking should be used to recenter PSF between samples
+
+    returns: zpts, PD_volts, PD_volt0, bkgd, minIndex, minAmp
+    '''
+
+    #-- Set the DM surface
+    flat = DM_setup(refsrf=refsrf, verbose=verbose)
+
+    #-- Make sure SAM is aligned to the goal fiber
+    SAM_setup(fiber=fiber, verbose=verbose)
+
+    #-- Take PD background
+    printv(verbose, 'Taking PD background')
+    bkgd = take_pd_background(nreads=nreads, VRange=VRange)
+    time.sleep(0.5)
+    
+    #-- Lock on fiber
+    printv(verbose, 'Locking on Fiber')
+    acquire_fiber_new(fiber, verbose=verbose)
+    printv(verbose, 'Locked onto fiber %d'%fiber)
+    # preset start_ttm to None. First iteration will then use current FAM pos and all others will use that same pos
+    start_ttm = None
+    
+    #-- Save starting PD value (to get a sense of initial condition)
+    track.stop_tracking()
+    # wait an instant for PD voltage to finish settling
+    time.sleep(0.2)
+    with PD_cmds() as pd:
+        PD_volt0 = pd.read_pd(nreads, v_range=VRange)   # This version returns an average already
+
+
+    #-- Preallocate data arrays
+    zpts  = np.round(np.arange(start, stop+step/2., step))   # round to net get ridiculously small values
+    PD_volts = np.zeros((len(zpts),3,FAM_Nstep)) *np.nan     # set nonsensical value (so we know if an error occurs)
+
+
+    #-- Loop through amplitudes to scan this zernike
+    for ind, zpt in enumerate(zpts):
+        printv(verbose, '\tAmplitude: %0.3f'%zpt)
+        # Apply zernike
+        DM.pokeZernike(zpt, noll, bias=flat)
+        # Dolinescan FAM scan
+            # NOTE: all scans will share the same start_ttm
+        pd_reads, start_ttm = tools.ttm_3_line_scans(FAM_stepRad, -FAM_stepRad, FAM_Nstep, 
+                pause=delay, start_ttm=start_ttm, nread=nreads, VRange=VRange)
+        # Save results into main array
+        PD_volts[ind,:,:] = pd_reads.copy()
+
+        # NOTE: don't re-acquire fiber so that all scans are centered equally
+
+    #-- Reset the flat surface
+    DM.setSurf(flat)
+
+    #-- Analyze results
+    # Subtract background
+    PD_volt_clean   = PD_volts - bkgd
+    PD_volt0_clean  = PD_volt0 - bkgd
+    # Find where the TWO maxima are for each of three line scans, choose zernike amp where the smallest of the 6 powers is largest
+    
+    def second_largest(numbers):
+        m1, m2 = 0, 0
+        for x in numbers:
+            if x >= m1:
+                m1, m2 = x, m1
+            elif x > m2:
+                m2 = x
+        index = numbers.index(m2)
+        return m2,index
+
+    def 2SidePeakFind(numbers):
+        # Subfunction to find the peak on each side of the donut in this linescan
+
+        # Split the linescan into 2 halves
+        left_half = numbers[:len(numbers)//2]
+        right_half = numbers[len(numbers)//2:]
+
+        # Find the largest 3 numbers in the left half
+        left_maxs = np.sort(left_half)[-3:]
+        right_maxs = np.sort(right_half)[-3:]
+
+        # Average those maxima
+        left_max = left_maxs.mean()
+        right_max = right_maxs.mean()
+
+        return left_max, right_max
+
+    minMaxima = np.zeros(len(zpts))
+    for z_ind, scan in enumerate(PD_volt_clean):
+        maxima = np.zeros(3,2)
+        for line_ind in range(3):
+            lmax, rmax = 2SidePeakFind(scan[line_ind])
+            maxima[line_ind,:] = np.array([lmax, rmax])
+        minMaxima[z_ind] = min(maxima)
+
+    maxIndex = minMaxima.argmax()
+    maxAmp = zpts[minIndex]
+    print('Maximum lowest throughput power at: %0.2f'%maxAmp)
+
+    # # Plot
+    # plt.figure()
+    # plt.scatter(zpts,PD_volt_clean)
+    # plt.plot(zpts,[coeffs[0]*zpt**2+coeffs[1]*zpt+coeffs[2] for zpt in zpts], '--')
+    # plt.axvline(x=minAmp)
+    # plt.xlabel('Amplitude [RMS BMC Units]')
+    # plt.ylabel('PD Power [V]')
+    # titlestr = 'Zernike Scan (Noll=%d)\n'%noll
+    # titlestr += 'TrackBtwn = {}'.format(isTrackBetween)
+    # plt.title(titlestr)
+
+    # #-- Save results
+    # if isSave:
+    #     # Make sure directory exists
+    #     Path = '/nfiudata/VFN_Cals/'
+    #     date_dir = os.path.join(Path, date)
+    #     if not os.path.exists(date_dir):
+    #         os.makedirs(date_dir)
+    #     # Save results
+    #     savenm = date_dir+'/Noll%2d_Fiber%d_time%d.png'%(noll, fiber, time.time())
+    #     plt.savefig(savenm)
+    #     printv(verbose, 'Saved: '+savenm)
+
+    return zpts, PD_volts, PD_volt0, bkgd, maxIndex, maxAmp
+
+
 ########### Function that does 2D (TT) Scan 
 #           ---> I'm thinking this would be a good way to start the scans
 
